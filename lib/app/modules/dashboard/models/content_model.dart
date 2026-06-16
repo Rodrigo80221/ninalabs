@@ -47,6 +47,13 @@ class TemplateModel {
   }
 }
 
+class ContentProductionStep {
+  final String title;
+  final bool isCompleted;
+
+  ContentProductionStep({required this.title, required this.isCompleted});
+}
+
 class ContentModel {
   final int id;
   final String companyName;
@@ -56,6 +63,9 @@ class ContentModel {
   final String description;
   final String date;
   final DateTime createdAt;
+  final int companyId;
+  final int templateId;
+  final List<ContentProductionStep> productionSteps;
 
   ContentModel({
     required this.id,
@@ -66,17 +76,22 @@ class ContentModel {
     required this.description,
     required this.date,
     required this.createdAt,
+    required this.companyId,
+    required this.templateId,
+    required this.productionSteps,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts) {
     // 1. Resolve Company Name (matching post's idInstagram to company's idInstagramLinked)
     String cName = 'Desconhecida';
+    int cId = 0;
     final postInstaList = json['idInstagram'] as List?;
     if (postInstaList != null && postInstaList.isNotEmpty) {
       final postInstaId = postInstaList.first['id'];
       try {
         final match = accounts.firstWhere((acc) => acc.idInstagramLinked == postInstaId);
         cName = match.accountName;
+        cId = match.id;
       } catch (e) {
         cName = 'ID $postInstaId';
       }
@@ -98,9 +113,11 @@ class ContentModel {
 
     // 5. Resolve Template
     String templateStr = 'Template Desconhecido';
+    int tId = 0;
     final templateList = json['idConteudo'] ?? json['field_8298718'] as List?;
     if (templateList != null && templateList.isNotEmpty) {
       templateStr = templateList.first['value'] ?? templateStr;
+      tId = templateList.first['id'] as int? ?? 0;
     }
 
     // 6. Resolve Date (Para Em Construção)
@@ -128,6 +145,80 @@ class ContentModel {
       // ignore
     }
 
+    bool isFilled(String fieldId) {
+      final val = json['field_$fieldId'] ?? json[fieldId];
+      if (val == null) return false;
+      if (val is String) return val.trim().isNotEmpty;
+      if (val is List) return val.isNotEmpty;
+      return true; // numbers, booleans, etc
+    }
+
+    final steps = [
+      ContentProductionStep(
+        title: 'Secretaria',
+        isCompleted: isFilled('7403505') || isFilled('SecretariaJoyce'),
+      ),
+      ContentProductionStep(
+        title: 'Estratégia',
+        isCompleted: isFilled('6993999') || isFilled('EstrategistaDeConteudo'),
+      ),
+      ContentProductionStep(
+        title: 'Planejamento',
+        isCompleted: isFilled('6963717') || isFilled('Gestor'),
+      ),
+      ContentProductionStep(
+        title: 'Conteúdo',
+        isCompleted: isFilled('6963716') || isFilled('DiretorConteudo'),
+      ),
+      ContentProductionStep(
+        title: 'HTML das imagens',
+        isCompleted: isFilled('7441568') || isFilled('html2image'),
+      ),
+      ContentProductionStep(
+        title: 'Imagem abertura',
+        isCompleted: isFilled('6964823') || isFilled('ImagemDeAbertura'),
+      ),
+      ContentProductionStep(
+        title: 'Imagens restantes',
+        isCompleted: isFilled('6966274') || isFilled('ImagensRestantes'),
+      ),
+      ContentProductionStep(
+        title: 'Narração',
+        isCompleted: (isFilled('6975911') || isFilled('Narracao')) &&
+                     (isFilled('6975912') || isFilled('AudioNarracao')),
+      ),
+      ContentProductionStep(
+        title: 'Legenda',
+        isCompleted: (isFilled('7004890') || isFilled('ArquivoLegenda')) ||
+                     (isFilled('7133863') || isFilled('ArquivoLegendaOriginal')),
+      ),
+      ContentProductionStep(
+        title: 'Vídeo base',
+        isCompleted: (isFilled('6969404') || isFilled('VideoMaker')) &&
+                     (isFilled('6970011') || isFilled('VideoEditado')),
+      ),
+      ContentProductionStep(
+        title: 'Música de fundo',
+        isCompleted: isFilled('6975660') || isFilled('BackgroundMusic'),
+      ),
+      ContentProductionStep(
+        title: 'Vídeo c/ áudio',
+        isCompleted: isFilled('7006491') || isFilled('VideoComAudio'),
+      ),
+      ContentProductionStep(
+        title: 'Vídeo legendado',
+        isCompleted: isFilled('7007172') || isFilled('VideoComLegendaPT'),
+      ),
+      ContentProductionStep(
+        title: 'Descrição',
+        isCompleted: isFilled('7012244') || isFilled('DescricaoPost'),
+      ),
+      ContentProductionStep(
+        title: 'Agendamento',
+        isCompleted: isFilled('7028349') || isFilled('idPostagemInstagram'),
+      ),
+    ];
+
     return ContentModel(
       id: json['id'] ?? 0,
       companyName: cName,
@@ -137,6 +228,9 @@ class ContentModel {
       description: descText,
       date: dateStr,
       createdAt: parsedDate,
+      companyId: cId,
+      templateId: tId,
+      productionSteps: steps,
     );
   }
 }
