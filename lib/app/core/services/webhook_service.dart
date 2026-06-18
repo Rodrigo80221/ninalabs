@@ -32,4 +32,33 @@ class WebhookService {
       return false;
     }
   }
+
+  static Future<bool> criarNovoPost({
+    required int codigoEmpresa,
+    required int codigoContrato,
+    required int idRow,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.criarNovoPost),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'codigoEmpresa': codigoEmpresa.toString(),
+          'codigoContrato': codigoContrato.toString(),
+          'idRow_InformarAquiRegistroDaTabelaHistoricoCriacaoDeRews': idRow.toString(),
+          'ApenasGerarIdeia?': false,
+        }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      } else {
+        debugPrint('Erro Webhook criarNovoPost (Status ${response.statusCode}): ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Erro Exception Webhook criarNovoPost: $e');
+      return false;
+    }
+  }
 }

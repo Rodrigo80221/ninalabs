@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -6,16 +8,86 @@ import '../models/content_model.dart';
 
 class SocialPostCard extends StatefulWidget {
   final ContentModel content;
+  final Future<void> Function()? onRefresh;
 
-  const SocialPostCard({super.key, required this.content});
+  const SocialPostCard({super.key, required this.content, this.onRefresh});
 
   @override
   State<SocialPostCard> createState() => _SocialPostCardState();
 }
 
-class _SocialPostCardState extends State<SocialPostCard> {
+class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   bool _isLoading = false;
+  bool _isWaitingForWebhook = false;
+  int _secondsRemaining = 600; // 10 minutes
+  Timer? _countdownTimer;
+  Timer? _refreshTimer;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _countdownTimer?.cancel();
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startWaiting() {
+    setState(() {
+      _isWaitingForWebhook = true;
+      _secondsRemaining = 600;
+    });
+
+    _animationController.repeat();
+
+    _countdownTimer?.cancel();
+    _refreshTimer?.cancel();
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_secondsRemaining > 0) {
+          _secondsRemaining--;
+        } else {
+          _stopWaiting();
+        }
+      });
+    });
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (widget.onRefresh != null) {
+        await widget.onRefresh!();
+      }
+      
+      if (!mounted) return;
+      // Check if all steps are completed
+      final allCompleted = widget.content.productionSteps.every((step) => step.isCompleted);
+      if (allCompleted) {
+        _stopWaiting();
+      }
+    });
+  }
+
+  void _stopWaiting() {
+    _countdownTimer?.cancel();
+    _refreshTimer?.cancel();
+    _animationController.stop();
+    if (mounted) {
+      setState(() {
+        _isWaitingForWebhook = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,35 +179,55 @@ class _SocialPostCardState extends State<SocialPostCard> {
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
                         ),
                         const SizedBox(height: 8),
-                        ...widget.content.productionSteps.map((step) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4.0), // short space
-                            child: Row(
-                              children: [
-                                Icon(
-                                  step.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                                  color: step.isCompleted ? Colors.green : Colors.grey,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    step.title,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: step.isCompleted ? AppColors.textDark : AppColors.textLight,
-                                    ),
+                        ...widget.content.productionSteps.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final step = entry.value;
+                          final nextStepIndex = widget.content.productionSteps.indexWhere((s) => !s.isCompleted);
+                          final isNextStep = _isWaitingForWebhook && index == nextStepIndex;
+
+                          final stepWidget = Row(
+                            children: [
+                              Icon(
+                                step.isCompleted ? Icons.check_circle : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                                color: isNextStep ? AppColors.terracotta : (step.isCompleted ? Colors.green : Colors.grey),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  step.title,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isNextStep ? AppColors.terracotta : (step.isCompleted ? AppColors.textDark : AppColors.textLight),
+                                    fontWeight: isNextStep ? FontWeight.bold : FontWeight.normal,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
+                          );
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0), // short space
+                            child: isNextStep
+                                ? AnimatedBuilder(
+                                    animation: _animationController,
+                                    builder: (context, child) {
+                                      final opacity = 0.4 + 0.6 * (0.5 * (1 + math.sin(_animationController.value * math.pi * 2)));
+                                      return Opacity(
+                                        opacity: opacity,
+                                        child: child,
+                                      );
+                                    },
+                                    child: stepWidget,
+                                  )
+                                : stepWidget,
                           );
                         }),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : () async {
+                            onPressed: (_isLoading || _isWaitingForWebhook) ? null : () async {
                               setState(() => _isLoading = true);
                               
                               final success = await WebhookService.continuarProducao(
@@ -146,6 +238,10 @@ class _SocialPostCardState extends State<SocialPostCard> {
                               
                               if (!mounted) return;
                               setState(() => _isLoading = false);
+                              
+                              if (success) {
+                                _startWaiting();
+                              }
                               
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -168,7 +264,22 @@ class _SocialPostCardState extends State<SocialPostCard> {
                                     width: 16,
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                   )
-                                : const Text('Continuar Produção', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                : _isWaitingForWebhook
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          RotationTransition(
+                                            turns: _animationController,
+                                            child: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Aguardando... ${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                          ),
+                                        ],
+                                      )
+                                    : const Text('Continuar Produção', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ),
                       ],

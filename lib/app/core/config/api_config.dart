@@ -3,4 +3,5 @@ class ApiConfig {
 
   // Endpoints
   static const String continuarProducao = '$webhookBaseUrl/continuarProdução';
+  static const String criarNovoPost = '$webhookBaseUrl/criarNovoPost';
 }

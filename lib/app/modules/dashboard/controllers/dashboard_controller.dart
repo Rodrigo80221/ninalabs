@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/baserow_service.dart';
+import '../../../core/services/webhook_service.dart';
 import '../models/content_model.dart';
 
 class DashboardController extends ChangeNotifier {
@@ -30,6 +31,7 @@ class DashboardController extends ChangeNotifier {
   String get selectedTemplate => _selectedTemplate;
   
   List<AccountModel> get accounts => _accounts;
+  List<TemplateModel> get allTemplates => _templates;
   
   List<TemplateModel> get templates {
     if (_selectedCompany == null || _selectedCompany == 'Todas') {
@@ -96,6 +98,38 @@ class DashboardController extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> updatePost(int id) async {
+    try {
+      final updatedPost = await _baserowService.fetchPost(id, _accounts);
+      final index = _contents.indexWhere((c) => c.id == id);
+      if (index != -1) {
+        _contents[index] = updatedPost;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Erro ao atualizar post: $e');
+    }
+  }
+
+  Future<bool> criarConteudo(int codigoEmpresa, int codigoContrato) async {
+    try {
+      final idRow = await _baserowService.createPostRow();
+      final success = await WebhookService.criarNovoPost(
+        codigoEmpresa: codigoEmpresa,
+        codigoContrato: codigoContrato,
+        idRow: idRow,
+      );
+      if (success) {
+        await _loadData();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Erro ao criar conteudo: $e');
+      return false;
     }
   }
 

@@ -44,6 +44,40 @@ class BaserowService {
     }
   }
 
+  Future<ContentModel> fetchPost(int postId, List<AccountModel> accounts) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$postsTableId/$postId/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      return ContentModel.fromJson(decoded, accounts);
+    } else {
+      throw Exception('Falha ao carregar o post do Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<int> createPostRow() async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/$postsTableId/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      return decoded['id'] as int;
+    } else {
+      throw Exception('Falha ao criar o post no Baserow: ${response.statusCode}');
+    }
+  }
+
   Future<List<TemplateModel>> fetchTemplates() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/$templatesTableId/?user_field_names=true'),
