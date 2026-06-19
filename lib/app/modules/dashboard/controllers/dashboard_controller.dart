@@ -114,13 +114,19 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  Future<bool> criarConteudo(int codigoEmpresa, int codigoContrato) async {
+  Future<bool> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate) async {
     try {
-      final idRow = await _baserowService.createPostRow();
+      final idRow = await _baserowService.createPostRow(
+        scheduleDate: scheduleDate,
+        companyId: company.id,
+        templateId: codigoContrato,
+        idInstagramLinked: company.idInstagramLinked,
+      );
       final success = await WebhookService.criarNovoPost(
-        codigoEmpresa: codigoEmpresa,
+        codigoEmpresa: company.id,
         codigoContrato: codigoContrato,
         idRow: idRow,
+        dataAgendamento: scheduleDate,
       );
       if (success) {
         await _loadData();
@@ -129,6 +135,18 @@ class DashboardController extends ChangeNotifier {
       return false;
     } catch (e) {
       print('Erro ao criar conteudo: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deletarConteudo(int postId) async {
+    try {
+      await _baserowService.deletePostRow(postId);
+      _contents.removeWhere((c) => c.id == postId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('Erro ao deletar conteudo: $e');
       return false;
     }
   }

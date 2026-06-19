@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../core/components/custom_dropdown.dart';
 import '../../core/theme/app_colors.dart';
 import 'controllers/dashboard_controller.dart';
@@ -34,6 +35,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void _showCreatePostDialog() {
     String selectedEmpresa = _controller.selectedCompany ?? 'Todas';
     String selectedTemplate = _controller.selectedTemplate;
+    DateTime? selectedDate;
 
     showDialog(
       context: context,
@@ -94,6 +96,46 @@ class _DashboardPageState extends State<DashboardPage> {
                       }
                     },
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          selectedDate == null 
+                              ? 'Nenhuma data selecionada' 
+                              : 'Agendado para: ${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.year} ${selectedDate!.hour.toString().padLeft(2, '0')}:${selectedDate!.minute.toString().padLeft(2, '0')}',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null && context.mounted) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (time != null && context.mounted) {
+                              setStateDialog(() {
+                                selectedDate = DateTime(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                  time.hour,
+                                  time.minute,
+                                );
+                              });
+                            }
+                          }
+                        },
+                        child: const Text('Data e Hora', style: TextStyle(color: AppColors.terracotta)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               actions: [
@@ -103,9 +145,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 ElevatedButton(
                   onPressed: isLoading ? null : () async {
-                    if (selectedEmpresa == 'Todas' || selectedTemplate == 'Todos') {
+                    if (selectedEmpresa == 'Todas' || selectedTemplate == 'Todos' || selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Selecione uma Empresa e um Template para criar.'), backgroundColor: AppColors.terracotta),
+                        const SnackBar(content: Text('Selecione Empresa, Template e Data/Hora para criar.'), backgroundColor: AppColors.terracotta),
                       );
                       return;
                     }
@@ -116,7 +158,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       final company = _controller.accounts.firstWhere((a) => a.accountName == selectedEmpresa);
                       final template = _controller.allTemplates.firstWhere((t) => t.name == selectedTemplate);
 
-                      final success = await _controller.criarConteudo(company.id, template.id);
+                      final success = await _controller.criarConteudo(company, template.id, selectedDate!);
                       if (success && mounted) {
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -168,30 +210,51 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePostDialog,
         backgroundColor: AppColors.terracotta,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Criar Conteúdo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        shape: const CircleBorder(),
+        elevation: 4,
+        child: const Icon(CupertinoIcons.add, color: Colors.white, size: 28),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _controller.currentTabIndex,
-        onTap: _controller.setTabIndex,
-        selectedItemColor: AppColors.terracotta,
-        unselectedItemColor: AppColors.textLight,
-        backgroundColor: AppColors.surface,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.build_circle_outlined),
-            activeIcon: Icon(Icons.build_circle),
-            label: 'Em Construção',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
+          ],
+        ),
+        child: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8.0,
+          color: AppColors.surface,
+          elevation: 0,
+          child: SizedBox(
+            height: 48,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    CupertinoIcons.wrench,
+                    color: _controller.currentTabIndex == 0 ? AppColors.terracotta : AppColors.textLight,
+                    size: 24,
+                  ),
+                  onPressed: () => _controller.setTabIndex(0),
+                ),
+                const SizedBox(width: 48), // Espaço para o FAB
+                IconButton(
+                  icon: Icon(
+                    CupertinoIcons.hand_thumbsup,
+                    color: _controller.currentTabIndex == 1 ? AppColors.terracotta : AppColors.textLight,
+                    size: 24,
+                  ),
+                  onPressed: () => _controller.setTabIndex(1),
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dynamic_feed_outlined),
-            activeIcon: Icon(Icons.dynamic_feed),
-            label: 'Finalizados',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -265,6 +328,7 @@ class _DashboardPageState extends State<DashboardPage> {
         return SocialPostCard(
           content: contents[index],
           onRefresh: () => _controller.updatePost(contents[index].id),
+          onDelete: () => _controller.deletarConteudo(contents[index].id),
         );
       },
     );
@@ -299,6 +363,7 @@ class _DashboardPageState extends State<DashboardPage> {
           return SocialPostCard(
             content: contents[index],
             onRefresh: () => _controller.updatePost(contents[index].id),
+            onDelete: () => _controller.deletarConteudo(contents[index].id),
           );
         },
       ),

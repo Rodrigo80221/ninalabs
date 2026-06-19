@@ -60,14 +60,33 @@ class BaserowService {
     }
   }
 
-  Future<int> createPostRow() async {
+  Future<int> createPostRow({
+    required DateTime scheduleDate,
+    required int companyId,
+    required int templateId,
+    int? idInstagramLinked,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final scheduleDateString = scheduleDate.toUtc().toIso8601String();
+
+    final bodyData = <String, dynamic>{
+      'field_9123342': scheduleDateString,
+      'field_6963661': now,
+      'field_9017794': [companyId], // idEmpresa
+      'field_8298718': [templateId], // idConteudo
+    };
+
+    if (idInstagramLinked != null) {
+      bodyData['field_8298716'] = [idInstagramLinked]; // idInstagram
+    }
+
     final response = await http.post(
       Uri.parse('$_baseUrl/$postsTableId/?user_field_names=true'),
       headers: {
         'Authorization': 'Token $_token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({}),
+      body: jsonEncode(bodyData),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -75,6 +94,19 @@ class BaserowService {
       return decoded['id'] as int;
     } else {
       throw Exception('Falha ao criar o post no Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<void> deletePostRow(int postId) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/$postsTableId/$postId/'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Falha ao excluir o post no Baserow: ${response.statusCode}');
     }
   }
 

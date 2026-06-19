@@ -34,7 +34,7 @@ Este documento contém o mapeamento completo das colunas (campos) da tabela de p
 | **8298718** | idConteudo | link_row |
 | **8445020** | Status | text |
 | **9017794** | idEmpresa | link_row |
-| **9017937** | DataHoraUltimaSolicitacao | date |
+
 
 ### Dica de uso da API
 Quando utilizar a API do Baserow com o parâmetro `?user_field_names=true`, as chaves do JSON virão exatamente como estão na coluna **Nome da Coluna** (ex: `json['ImagemDeAbertura']`). Caso utilize a API sem esse parâmetro, as chaves virão como `field_CODIGO` (exemplo: `json['field_6964823']` para a imagem de abertura).

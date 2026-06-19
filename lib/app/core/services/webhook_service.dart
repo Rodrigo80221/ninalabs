@@ -37,6 +37,7 @@ class WebhookService {
     required int codigoEmpresa,
     required int codigoContrato,
     required int idRow,
+    required DateTime dataAgendamento,
   }) async {
     try {
       final response = await http.post(
@@ -47,6 +48,7 @@ class WebhookService {
           'codigoContrato': codigoContrato.toString(),
           'idRow_InformarAquiRegistroDaTabelaHistoricoCriacaoDeRews': idRow.toString(),
           'ApenasGerarIdeia?': false,
+          'DataAgendamentoInstagram': dataAgendamento.toIso8601String(),
         }),
       );
 

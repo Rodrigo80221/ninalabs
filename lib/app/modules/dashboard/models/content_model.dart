@@ -120,26 +120,20 @@ class ContentModel {
       tId = templateList.first['id'] as int? ?? 0;
     }
 
-    // 6. Resolve Date (Para Em Construção)
-    String dateStr = json['DataHoraUltimaSolicitacao'] ?? json['field_9017937'] ?? '';
-    if (dateStr.isNotEmpty) {
-      try {
-        final d = DateTime.parse(dateStr).toLocal();
+    // 6 & 7. Resolve Date (Para Em Construção) e Created At para ordenação
+    String rawDate = json['DataHora'] ?? json['field_6963661'] ?? '';
+    String dateStr = rawDate;
+    DateTime parsedDate = DateTime.fromMillisecondsSinceEpoch(0);
+    try {
+      if (rawDate.isNotEmpty) {
+        parsedDate = DateTime.parse(rawDate);
+        final d = parsedDate.toLocal();
         final day = d.day.toString().padLeft(2, '0');
         final month = d.month.toString().padLeft(2, '0');
         final year = d.year.toString();
         final hour = d.hour.toString().padLeft(2, '0');
         final min = d.minute.toString().padLeft(2, '0');
         dateStr = '$day/$month/$year $hour:$min';
-      } catch (_) {}
-    }
-
-    // 7. Resolve Created At para ordenação
-    String rawDate = json['DataHora'] ?? json['field_6963661'] ?? '';
-    DateTime parsedDate = DateTime.fromMillisecondsSinceEpoch(0);
-    try {
-      if (rawDate.isNotEmpty) {
-        parsedDate = DateTime.parse(rawDate);
       }
     } catch (e) {
       // ignore
