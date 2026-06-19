@@ -60,15 +60,16 @@ class ContentModel {
   final int id;
   final String companyName;
   final String templateName;
-  final String status;
+  String status;
   final String imageUrl;
   final String description;
   final String date;
-  final String? postDate;
+  String? postDate;
   final DateTime createdAt;
   final int companyId;
   final int templateId;
   final List<ContentProductionStep> productionSteps;
+  int? linkedScheduleId;
 
   ContentModel({
     required this.id,
@@ -83,6 +84,7 @@ class ContentModel {
     required this.companyId,
     required this.templateId,
     required this.productionSteps,
+    this.linkedScheduleId,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
@@ -104,20 +106,33 @@ class ContentModel {
     // 2. Resolve Status using Schedule table
     String st = 'Pendente';
     String? pDate;
+    int? parsedLinkedScheduleId;
     final idPostagemList = json['idPostagemInstagram'] ?? json['field_7028349'];
-    if (idPostagemList != null && idPostagemList is List && idPostagemList.isNotEmpty) {
-      final linkedScheduleId = idPostagemList.first['id'];
-      try {
-        final match = schedules.firstWhere((s) => s.id == linkedScheduleId);
-        if (match.postado) {
-          st = 'Postado';
-        } else {
-          st = 'Agendado';
+    if (idPostagemList != null) {
+      if (idPostagemList is List && idPostagemList.isNotEmpty) {
+        parsedLinkedScheduleId = idPostagemList.first['id'];
+        st = 'Agendado';
+      } else if (idPostagemList is String && idPostagemList.trim().isNotEmpty) {
+        parsedLinkedScheduleId = int.tryParse(idPostagemList.trim());
+        st = 'Agendado';
+      } else if (idPostagemList is int) {
+        parsedLinkedScheduleId = idPostagemList;
+        st = 'Agendado';
+      }
+
+      if (parsedLinkedScheduleId != null) {
+        try {
+          final match = schedules.firstWhere((s) => s.id == parsedLinkedScheduleId);
           pDate = match.dataDaPostagem;
+          if (match.postado) {
+            st = 'Postado';
+          }
+        } catch (e) {
+          st = 'Agendado';
         }
-      } catch (e) {
-        // Fallback to Pendente if linked row not found
-        st = 'Pendente';
+      } else if (st == 'Agendado' && idPostagemList is String) {
+        // If it's a string but couldn't be parsed as an int, still mark as scheduled
+        pDate = idPostagemList;
       }
     }
 

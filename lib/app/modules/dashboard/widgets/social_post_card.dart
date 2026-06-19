@@ -231,6 +231,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   }
 
   Widget _buildCaption(BuildContext context) {
+    if (widget.content.status == 'Pendente') return const SizedBox.shrink();
     if (widget.content.description.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.all(16.0),

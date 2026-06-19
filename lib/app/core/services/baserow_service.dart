@@ -5,7 +5,7 @@ import '../../modules/dashboard/models/schedule_model.dart';
 
 class BaserowService {
   static const String _baseUrl = 'https://api.baserow.io/api/database/rows/table';
-  static const String _token = 'E2toEerbjIyYZppn6uNxK5D9cbb5ITMb';
+  static const String _token = 'cEruEiUFkFtmiJ63GLMuBOWFmgdh5wu5';
   
   static const String accountsTableId = '820734'; // Tabela de Empresas
   static const String postsTableId = '812614';
@@ -130,27 +130,19 @@ class BaserowService {
   }
 
   Future<List<ScheduleModel>> fetchSchedules() async {
-    List<ScheduleModel> allSchedules = [];
-    String? nextUrl = '$_baseUrl/$schedulesTableId/?user_field_names=true&size=200';
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$schedulesTableId/?user_field_names=true&size=200'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
 
-    while (nextUrl != null) {
-      final response = await http.get(
-        Uri.parse(nextUrl),
-        headers: {
-          'Authorization': 'Token $_token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(utf8.decode(response.bodyBytes));
-        final List results = decoded['results'] ?? [];
-        allSchedules.addAll(results.map((json) => ScheduleModel.fromJson(json)));
-        nextUrl = decoded['next'];
-      } else {
-        throw Exception('Falha ao carregar os agendamentos do Baserow: ${response.statusCode}');
-      }
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final List results = decoded['results'] ?? [];
+      return results.map((json) => ScheduleModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Falha ao carregar os agendamentos do Baserow: ${response.statusCode} - Body: ${response.body}');
     }
-
-    return allSchedules;
   }
 }

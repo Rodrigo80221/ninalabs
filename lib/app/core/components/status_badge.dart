@@ -21,7 +21,11 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        isScheduled && postDate != null && postDate!.isNotEmpty ? 'AGENDADO: $postDate' : status.toUpperCase(),
+        isScheduled && postDate != null && postDate!.isNotEmpty
+            ? 'AGENDADO: $postDate'
+            : (!isPending && !isScheduled && postDate != null && postDate!.isNotEmpty)
+                ? 'POSTADO: $postDate'
+                : status.toUpperCase(),
         style: TextStyle(
           color: textColor,
           fontSize: 10,
