@@ -14,6 +14,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final DashboardController _controller = DashboardController();
+  TimeOfDay _lastSelectedTime = const TimeOfDay(hour: 18, minute: 0);
 
   @override
   void initState() {
@@ -35,7 +36,16 @@ class _DashboardPageState extends State<DashboardPage> {
   void _showCreatePostDialog() {
     String selectedEmpresa = _controller.selectedCompany ?? 'Todas';
     String selectedTemplate = _controller.selectedTemplate;
-    DateTime? selectedDate;
+    
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+    DateTime? selectedDate = DateTime(
+      tomorrow.year, 
+      tomorrow.month, 
+      tomorrow.day, 
+      _lastSelectedTime.hour, 
+      _lastSelectedTime.minute,
+    );
 
     showDialog(
       context: context,
@@ -97,44 +107,58 @@ class _DashboardPageState extends State<DashboardPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          selectedDate == null 
-                              ? 'Nenhuma data selecionada' 
-                              : 'Agendado para: ${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.year} ${selectedDate!.hour.toString().padLeft(2, '0')}:${selectedDate!.minute.toString().padLeft(2, '0')}',
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null && context.mounted) {
-                            final time = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
+                  InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate ?? DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null && context.mounted) {
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(selectedDate ?? DateTime.now()),
+                        );
+                        if (time != null && context.mounted) {
+                          setStateDialog(() {
+                            selectedDate = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                              time.hour,
+                              time.minute,
                             );
-                            if (time != null && context.mounted) {
-                              setStateDialog(() {
-                                selectedDate = DateTime(
-                                  date.year,
-                                  date.month,
-                                  date.day,
-                                  time.hour,
-                                  time.minute,
-                                );
-                              });
-                            }
-                          }
-                        },
-                        child: const Text('Data e Hora', style: TextStyle(color: AppColors.terracotta)),
+                          });
+                          setState(() {
+                            _lastSelectedTime = time;
+                          });
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            selectedDate == null
+                                ? 'Selecionar Data e Hora'
+                                : '${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.year} às ${selectedDate!.hour.toString().padLeft(2, '0')}:${selectedDate!.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              color: selectedDate == null ? AppColors.textLight : AppColors.textDark,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Icon(Icons.calendar_today, color: AppColors.textLight, size: 20),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -147,7 +171,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   onPressed: isLoading ? null : () async {
                     if (selectedEmpresa == 'Todas' || selectedTemplate == 'Todos' || selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Selecione Empresa, Template e Data/Hora para criar.'), backgroundColor: AppColors.terracotta),
+                        const SnackBar(content: Text('Selecione Empresa e Template para criar.'), backgroundColor: AppColors.terracotta),
                       );
                       return;
                     }
@@ -158,8 +182,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       final company = _controller.accounts.firstWhere((a) => a.accountName == selectedEmpresa);
                       final template = _controller.allTemplates.firstWhere((t) => t.name == selectedTemplate);
 
-                      final success = await _controller.criarConteudo(company, template.id, selectedDate!);
-                      if (success && mounted) {
+                      final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!);
+                      if (apiResponse.success && mounted) {
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Criação de conteúdo iniciada com sucesso!'), backgroundColor: Colors.green),
@@ -167,7 +191,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       } else if (mounted) {
                         setStateDialog(() => isLoading = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Erro ao criar conteúdo.'), backgroundColor: Colors.red),
+                          SnackBar(content: Text(apiResponse.message ?? 'Erro ao criar conteúdo.'), backgroundColor: Colors.red),
                         );
                       }
                     } catch (e) {
@@ -325,10 +349,14 @@ class _DashboardPageState extends State<DashboardPage> {
     return ListView.builder(
       itemCount: contents.length,
       itemBuilder: (context, index) {
+        final content = contents[index];
         return SocialPostCard(
-          content: contents[index],
-          onRefresh: () => _controller.updatePost(contents[index].id),
-          onDelete: () => _controller.deletarConteudo(contents[index].id),
+          key: ValueKey(content.id),
+          content: content,
+          isInitiallyWaiting: _controller.pollingPostIds.contains(content.id),
+          onPollingChanged: (isPolling) => _controller.setPolling(content.id, isPolling),
+          onRefresh: () => _controller.updatePost(content.id),
+          onDelete: () => _controller.deletarConteudo(content.id),
         );
       },
     );
@@ -361,7 +389,10 @@ class _DashboardPageState extends State<DashboardPage> {
             );
           }
           return SocialPostCard(
+            key: ValueKey(contents[index].id),
             content: contents[index],
+            isInitiallyWaiting: _controller.pollingPostIds.contains(contents[index].id),
+            onPollingChanged: (isPolling) => _controller.setPolling(contents[index].id, isPolling),
             onRefresh: () => _controller.updatePost(contents[index].id),
             onDelete: () => _controller.deletarConteudo(contents[index].id),
           );

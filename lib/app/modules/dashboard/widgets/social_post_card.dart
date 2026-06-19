@@ -10,8 +10,17 @@ class SocialPostCard extends StatefulWidget {
   final ContentModel content;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onDelete;
+  final bool isInitiallyWaiting;
+  final Function(bool)? onPollingChanged;
 
-  const SocialPostCard({super.key, required this.content, this.onRefresh, this.onDelete});
+  const SocialPostCard({
+    super.key, 
+    required this.content, 
+    this.onRefresh, 
+    this.onDelete,
+    this.isInitiallyWaiting = false,
+    this.onPollingChanged,
+  });
 
   @override
   State<SocialPostCard> createState() => _SocialPostCardState();
@@ -33,6 +42,9 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
       vsync: this,
       duration: const Duration(seconds: 1),
     );
+    if (widget.isInitiallyWaiting) {
+      _startWaiting();
+    }
   }
 
   @override
@@ -44,6 +56,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   }
 
   void _startWaiting() {
+    if (widget.onPollingChanged != null) widget.onPollingChanged!(true);
     setState(() {
       _isWaitingForWebhook = true;
       _secondsRemaining = 600;
@@ -83,6 +96,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     _countdownTimer?.cancel();
     _refreshTimer?.cancel();
     _animationController.stop();
+    if (widget.onPollingChanged != null) widget.onPollingChanged!(false);
     if (mounted) {
       setState(() {
         _isWaitingForWebhook = false;
@@ -120,7 +134,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             ),
           ),
           if (widget.content.status != 'Pendente')
-            StatusBadge(status: widget.content.status),
+            StatusBadge(status: widget.content.status, postDate: widget.content.postDate),
           if (widget.content.status == 'Pendente')
             IconButton(
               icon: const Icon(Icons.more_horiz),
@@ -315,7 +329,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
               onPressed: (_isLoading || _isWaitingForWebhook) ? null : () async {
                 setState(() => _isLoading = true);
                 
-                final success = await WebhookService.continuarProducao(
+                final apiResponse = await WebhookService.continuarProducao(
                   codigoEmpresa: widget.content.companyId,
                   codigoContrato: widget.content.templateId,
                   idRow: widget.content.id,
@@ -324,14 +338,14 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                 if (!mounted) return;
                 setState(() => _isLoading = false);
                 
-                if (success) {
+                if (apiResponse.success) {
                   _startWaiting();
                 }
                 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Ação enviada com sucesso!' : 'Erro ao enviar ação para o webhook.'),
-                    backgroundColor: success ? Colors.green : AppColors.terracotta,
+                    content: Text(apiResponse.success ? 'Ação enviada com sucesso!' : (apiResponse.message ?? 'Erro ao enviar ação para o webhook.')),
+                    backgroundColor: apiResponse.success ? Colors.green : AppColors.terracotta,
                   ),
                 );
               },

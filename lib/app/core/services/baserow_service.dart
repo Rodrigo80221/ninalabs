@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../modules/dashboard/models/content_model.dart';
+import '../../modules/dashboard/models/schedule_model.dart';
 
 class BaserowService {
   static const String _baseUrl = 'https://api.baserow.io/api/database/rows/table';
@@ -9,6 +10,7 @@ class BaserowService {
   static const String accountsTableId = '820734'; // Tabela de Empresas
   static const String postsTableId = '812614';
   static const String templatesTableId = '862226';
+  static const String schedulesTableId = '557294';
 
   Future<List<AccountModel>> fetchAccounts() async {
     final response = await http.get(
@@ -27,7 +29,7 @@ class BaserowService {
     }
   }
 
-  Future<List<ContentModel>> fetchPosts(List<AccountModel> accounts) async {
+  Future<List<ContentModel>> fetchPosts(List<AccountModel> accounts, List<ScheduleModel> schedules) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/$postsTableId/?user_field_names=true'),
       headers: {
@@ -38,13 +40,13 @@ class BaserowService {
     if (response.statusCode == 200) {
       final decoded = json.decode(utf8.decode(response.bodyBytes));
       final List results = decoded['results'] ?? [];
-      return results.map((json) => ContentModel.fromJson(json, accounts)).toList();
+      return results.map((json) => ContentModel.fromJson(json, accounts, schedules)).toList();
     } else {
       throw Exception('Falha ao carregar os posts do Baserow: ${response.statusCode}');
     }
   }
 
-  Future<ContentModel> fetchPost(int postId, List<AccountModel> accounts) async {
+  Future<ContentModel> fetchPost(int postId, List<AccountModel> accounts, List<ScheduleModel> schedules) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/$postsTableId/$postId/?user_field_names=true'),
       headers: {
@@ -54,7 +56,7 @@ class BaserowService {
 
     if (response.statusCode == 200) {
       final decoded = json.decode(utf8.decode(response.bodyBytes));
-      return ContentModel.fromJson(decoded, accounts);
+      return ContentModel.fromJson(decoded, accounts, schedules);
     } else {
       throw Exception('Falha ao carregar o post do Baserow: ${response.statusCode}');
     }
@@ -70,14 +72,14 @@ class BaserowService {
     final scheduleDateString = scheduleDate.toUtc().toIso8601String();
 
     final bodyData = <String, dynamic>{
-      'field_9123342': scheduleDateString,
-      'field_6963661': now,
-      'field_9017794': [companyId], // idEmpresa
-      'field_8298718': [templateId], // idConteudo
+      'DataAgendamentoInstagram': scheduleDateString,
+      'DataHora': now,
+      'idEmpresa': [companyId],
+      'idConteudo': [templateId],
     };
 
     if (idInstagramLinked != null) {
-      bodyData['field_8298716'] = [idInstagramLinked]; // idInstagram
+      bodyData['IdInstagram'] = [idInstagramLinked];
     }
 
     final response = await http.post(
@@ -125,5 +127,30 @@ class BaserowService {
     } else {
       throw Exception('Falha ao carregar os templates do Baserow: ${response.statusCode}');
     }
+  }
+
+  Future<List<ScheduleModel>> fetchSchedules() async {
+    List<ScheduleModel> allSchedules = [];
+    String? nextUrl = '$_baseUrl/$schedulesTableId/?user_field_names=true&size=200';
+
+    while (nextUrl != null) {
+      final response = await http.get(
+        Uri.parse(nextUrl),
+        headers: {
+          'Authorization': 'Token $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(utf8.decode(response.bodyBytes));
+        final List results = decoded['results'] ?? [];
+        allSchedules.addAll(results.map((json) => ScheduleModel.fromJson(json)));
+        nextUrl = decoded['next'];
+      } else {
+        throw Exception('Falha ao carregar os agendamentos do Baserow: ${response.statusCode}');
+      }
+    }
+
+    return allSchedules;
   }
 }

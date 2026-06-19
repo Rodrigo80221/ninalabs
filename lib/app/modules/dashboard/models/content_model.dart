@@ -1,3 +1,5 @@
+import 'schedule_model.dart';
+
 class AccountModel {
   final int id;
   final String accountName;
@@ -62,6 +64,7 @@ class ContentModel {
   final String imageUrl;
   final String description;
   final String date;
+  final String? postDate;
   final DateTime createdAt;
   final int companyId;
   final int templateId;
@@ -75,13 +78,14 @@ class ContentModel {
     required this.imageUrl,
     required this.description,
     required this.date,
+    this.postDate,
     required this.createdAt,
     required this.companyId,
     required this.templateId,
     required this.productionSteps,
   });
 
-  factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts) {
+  factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
     // 1. Resolve Company Name (matching post's idInstagram to company's idInstagramLinked)
     String cName = 'Desconhecida';
     int cId = 0;
@@ -97,9 +101,25 @@ class ContentModel {
       }
     }
 
-    // 2. Resolve Status
-    final idPostagem = json['idPostagemInstagram'] ?? json['field_7028349'];
-    String st = (idPostagem != null && idPostagem.toString().trim().isNotEmpty) ? 'Postado' : 'Pendente';
+    // 2. Resolve Status using Schedule table
+    String st = 'Pendente';
+    String? pDate;
+    final idPostagemList = json['idPostagemInstagram'] ?? json['field_7028349'];
+    if (idPostagemList != null && idPostagemList is List && idPostagemList.isNotEmpty) {
+      final linkedScheduleId = idPostagemList.first['id'];
+      try {
+        final match = schedules.firstWhere((s) => s.id == linkedScheduleId);
+        if (match.postado) {
+          st = 'Postado';
+        } else {
+          st = 'Agendado';
+          pDate = match.dataDaPostagem;
+        }
+      } catch (e) {
+        // Fallback to Pendente if linked row not found
+        st = 'Pendente';
+      }
+    }
 
     // 3. Resolve Image URL
     String img = 'https://via.placeholder.com/400x300/F4DCD6/2C2C2C?text=Sem+Imagem';
@@ -221,6 +241,7 @@ class ContentModel {
       imageUrl: img,
       description: descText,
       date: dateStr,
+      postDate: pDate,
       createdAt: parsedDate,
       companyId: cId,
       templateId: tId,
@@ -228,3 +249,4 @@ class ContentModel {
     );
   }
 }
+

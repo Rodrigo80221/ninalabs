@@ -3,14 +3,16 @@ import '../theme/app_colors.dart';
 
 class StatusBadge extends StatelessWidget {
   final String status;
+  final String? postDate;
 
-  const StatusBadge({super.key, required this.status});
+  const StatusBadge({super.key, required this.status, this.postDate});
 
   @override
   Widget build(BuildContext context) {
     final bool isPending = status.toLowerCase() == 'pendente';
-    final Color bgColor = isPending ? AppColors.statusPendingBg : AppColors.statusPostedBg;
-    final Color textColor = isPending ? AppColors.statusPendingText : AppColors.statusPostedText;
+    final bool isScheduled = status.toLowerCase() == 'agendado';
+    final Color bgColor = isPending ? AppColors.statusPendingBg : (isScheduled ? AppColors.quartzPink : AppColors.statusPostedBg);
+    final Color textColor = isPending ? AppColors.statusPendingText : (isScheduled ? AppColors.terracotta : AppColors.statusPostedText);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -19,7 +21,7 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status.toUpperCase(),
+        isScheduled && postDate != null && postDate!.isNotEmpty ? 'AGENDADO: $postDate' : status.toUpperCase(),
         style: TextStyle(
           color: textColor,
           fontSize: 10,

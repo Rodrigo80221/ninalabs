@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/baserow_service.dart';
 import '../../../core/services/webhook_service.dart';
+import '../../../core/models/api_response.dart';
 import '../models/content_model.dart';
+import '../models/schedule_model.dart';
 
 class DashboardController extends ChangeNotifier {
   final BaserowService _baserowService = BaserowService();
@@ -9,9 +11,21 @@ class DashboardController extends ChangeNotifier {
   List<AccountModel> _accounts = [];
   List<TemplateModel> _templates = [];
   List<ContentModel> _contents = [];
+  List<ScheduleModel> _schedules = [];
   
   bool isLoading = true;
   String? errorMessage;
+
+  // Polling State
+  final Set<int> pollingPostIds = {};
+
+  void setPolling(int id, bool isPolling) {
+    if (isPolling) {
+      pollingPostIds.add(id);
+    } else {
+      pollingPostIds.remove(id);
+    }
+  }
 
   // Navigation State
   int _currentTabIndex = 0; // 0 = Em Construção, 1 = Finalizados
@@ -55,14 +69,14 @@ class DashboardController extends ChangeNotifier {
   }
 
   List<ContentModel> get postedContents {
-    final filtered = _applyFilters(_contents.where((c) => c.status == 'Postado').toList());
+    final filtered = _applyFilters(_contents.where((c) => c.status == 'Postado' || c.status == 'Agendado').toList());
     // Ordem decrescente por DataHora
     filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return filtered.take(_feedLimit).toList();
   }
 
   bool get hasMoreFeed {
-    final filtered = _applyFilters(_contents.where((c) => c.status == 'Postado').toList());
+    final filtered = _applyFilters(_contents.where((c) => c.status == 'Postado' || c.status == 'Agendado').toList());
     return _feedLimit < filtered.length;
   }
 
@@ -81,17 +95,19 @@ class DashboardController extends ChangeNotifier {
       final results = await Future.wait([
         _baserowService.fetchAccounts(),
         _baserowService.fetchTemplates(),
+        _baserowService.fetchSchedules(),
       ]);
       
       _accounts = results[0] as List<AccountModel>;
       _templates = results[1] as List<TemplateModel>;
+      _schedules = results[2] as List<ScheduleModel>;
       
       if (_accounts.isNotEmpty) {
         _selectedCompany = _accounts.first.accountName; // Default select first
       }
 
       // We need the accounts list to resolve the content links properly
-      _contents = await _baserowService.fetchPosts(_accounts);
+      _contents = await _baserowService.fetchPosts(_accounts, _schedules);
 
     } catch (e) {
       errorMessage = e.toString();
@@ -103,7 +119,9 @@ class DashboardController extends ChangeNotifier {
 
   Future<void> updatePost(int id) async {
     try {
-      final updatedPost = await _baserowService.fetchPost(id, _accounts);
+      // Re-fetch schedules to ensure we have the latest status
+      _schedules = await _baserowService.fetchSchedules();
+      final updatedPost = await _baserowService.fetchPost(id, _accounts, _schedules);
       final index = _contents.indexWhere((c) => c.id == id);
       if (index != -1) {
         _contents[index] = updatedPost;
@@ -114,7 +132,7 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  Future<bool> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate) async {
+  Future<ApiResponse> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate) async {
     try {
       final idRow = await _baserowService.createPostRow(
         scheduleDate: scheduleDate,
@@ -122,20 +140,26 @@ class DashboardController extends ChangeNotifier {
         templateId: codigoContrato,
         idInstagramLinked: company.idInstagramLinked,
       );
-      final success = await WebhookService.criarNovoPost(
+      // Dispara o webhook em background sem bloquear a UI
+      WebhookService.criarNovoPost(
         codigoEmpresa: company.id,
         codigoContrato: codigoContrato,
         idRow: idRow,
         dataAgendamento: scheduleDate,
-      );
-      if (success) {
-        await _loadData();
-        return true;
-      }
-      return false;
+      ).then((response) {
+        if (!response.success) {
+          print('Erro no webhook em background: ${response.message}');
+        }
+      });
+
+      // Adiciona na timeline imediatamente
+      pollingPostIds.add(idRow);
+      await _loadData();
+
+      return ApiResponse(success: true);
     } catch (e) {
       print('Erro ao criar conteudo: $e');
-      return false;
+      return ApiResponse(success: false, message: 'Erro ao criar conteudo: $e');
     }
   }
 
