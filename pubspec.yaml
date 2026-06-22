@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   hugeicons: ^1.1.7
+  flutter_quill: ^11.5.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

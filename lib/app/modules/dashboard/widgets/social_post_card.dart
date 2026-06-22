@@ -137,7 +137,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             StatusBadge(status: widget.content.status, postDate: widget.content.postDate),
           if (widget.content.status == 'Pendente')
             IconButton(
-              icon: const Icon(Icons.more_horiz),
+              icon: const Icon(Icons.more_vert),
               onPressed: () {
                 showModalBottomSheet(
                   context: context,

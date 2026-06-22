@@ -5,12 +5,14 @@ class AccountModel {
   final String accountName;
   final List<int> templateIds;
   final int? idInstagramLinked;
+  final String? informacoesDaEmpresa;
 
   AccountModel({
     required this.id,
     required this.accountName,
     required this.templateIds,
     this.idInstagramLinked,
+    this.informacoesDaEmpresa,
   });
 
   factory AccountModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class AccountModel {
       accountName: json['Name'] ?? json['field_7048152'] ?? 'Empresa Desconhecida',
       templateIds: tIds,
       idInstagramLinked: instaId,
+      informacoesDaEmpresa: json['InformacoesDaEmpresa'] as String?,
     );
   }
 }
@@ -38,13 +41,15 @@ class AccountModel {
 class TemplateModel {
   final int id;
   final String name;
+  final String? regras;
 
-  TemplateModel({required this.id, required this.name});
+  TemplateModel({required this.id, required this.name, this.regras});
 
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
     return TemplateModel(
       id: json['id'] ?? 0,
       name: json['Name'] ?? json['field_7441612'] ?? 'Template Desconhecido',
+      regras: json['Regras'] ?? json['field_9175683'],
     );
   }
 }
@@ -122,8 +127,20 @@ class ContentModel {
 
       if (parsedLinkedScheduleId != null) {
         try {
-          final match = schedules.firstWhere((s) => s.id == parsedLinkedScheduleId);
-          pDate = match.dataDaPostagem;
+          final match = schedules.firstWhere((s) => s.idRow == parsedLinkedScheduleId || s.id == parsedLinkedScheduleId);
+          String matchDate = match.dataDaPostagem;
+          try {
+            if (matchDate.isNotEmpty) {
+              final d = DateTime.parse(matchDate).toLocal();
+              final day = d.day.toString().padLeft(2, '0');
+              final month = d.month.toString().padLeft(2, '0');
+              final year = d.year.toString();
+              final hour = d.hour.toString().padLeft(2, '0');
+              final min = d.minute.toString().padLeft(2, '0');
+              matchDate = '$day/$month/$year $hour:$min';
+            }
+          } catch (_) {}
+          pDate = matchDate;
           if (match.postado) {
             st = 'Postado';
           }

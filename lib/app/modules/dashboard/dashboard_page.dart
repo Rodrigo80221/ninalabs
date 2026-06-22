@@ -4,6 +4,9 @@ import '../../core/components/custom_dropdown.dart';
 import '../../core/theme/app_colors.dart';
 import 'controllers/dashboard_controller.dart';
 import 'widgets/social_post_card.dart';
+import '../empresas/empresa_form_page.dart';
+import '../templates/templates_page.dart';
+import 'models/content_model.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -34,7 +37,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showCreatePostDialog() {
-    String selectedEmpresa = _controller.selectedCompany ?? 'Todas';
+    String? selectedEmpresa = _controller.selectedCompany;
     String selectedTemplate = _controller.selectedTemplate;
     
     final now = DateTime.now();
@@ -52,10 +55,10 @@ class _DashboardPageState extends State<DashboardPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            final accountNames = ['Todas', ..._controller.accounts.map((a) => a.accountName)];
+            final accountNames = _controller.accounts.map((a) => a.accountName).toList();
             
             List<String> dialogTemplateNames = ['Todos'];
-            if (selectedEmpresa != 'Todas') {
+            if (selectedEmpresa != null) {
               try {
                 final company = _controller.accounts.firstWhere((a) => a.accountName == selectedEmpresa);
                 final companyTemplates = _controller.allTemplates.where((t) => company.templateIds.contains(t.id)).toList();
@@ -169,7 +172,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 ElevatedButton(
                   onPressed: isLoading ? null : () async {
-                    if (selectedEmpresa == 'Todas' || selectedTemplate == 'Todos' || selectedDate == null) {
+                    if (selectedEmpresa == null || selectedTemplate == 'Todos' || selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Selecione Empresa e Template para criar.'), backgroundColor: AppColors.terracotta),
                       );
@@ -185,6 +188,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!);
                       if (apiResponse.success && mounted) {
                         Navigator.of(context).pop();
+                        _controller.setTabIndex(1); // Mudar para "Em Construção"
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Criação de conteúdo iniciada com sucesso!'), backgroundColor: Colors.green),
                         );
@@ -221,6 +225,71 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nina Labs'),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: AppColors.terracotta,
+              ),
+              child: Text(
+                'Nina Labs',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.business, color: AppColors.textDark),
+              title: const Text('Empresa', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(context);
+                final companyName = _controller.selectedCompany;
+                if (companyName != null) {
+                  try {
+                    final company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EmpresaFormPage(account: company)),
+                    );
+                  } catch (e) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
+                    );
+                  }
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_copy, color: AppColors.textDark),
+              title: const Text('Templates', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(context);
+                final companyName = _controller.selectedCompany;
+                AccountModel? company;
+                if (companyName != null) {
+                  try {
+                    company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
+                  } catch (_) {}
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => TemplatesPage(account: company)),
+                );
+              },
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -260,7 +329,7 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 IconButton(
                   icon: Icon(
-                    CupertinoIcons.wrench,
+                    CupertinoIcons.hand_thumbsup,
                     color: _controller.currentTabIndex == 0 ? AppColors.terracotta : AppColors.textLight,
                     size: 24,
                   ),
@@ -269,7 +338,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(width: 48), // Espaço para o FAB
                 IconButton(
                   icon: Icon(
-                    CupertinoIcons.hand_thumbsup,
+                    CupertinoIcons.wrench,
                     color: _controller.currentTabIndex == 1 ? AppColors.terracotta : AppColors.textLight,
                     size: 24,
                   ),
@@ -299,11 +368,11 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
     }
-    return _controller.currentTabIndex == 0 ? _buildPendingSection() : _buildFeedSection();
+    return _controller.currentTabIndex == 0 ? _buildFeedSection() : _buildPendingSection();
   }
 
   Widget _buildFilters() {
-    final accountNames = ['Todas', ..._controller.accounts.map((a) => a.accountName)];
+    final accountNames = _controller.accounts.map((a) => a.accountName).toList();
     final templateNames = ['Todos', ..._controller.templates.map((t) => t.name)];
     
     return Container(
@@ -314,7 +383,7 @@ class _DashboardPageState extends State<DashboardPage> {
           CustomDropdown(
             label: 'Empresa',
             hint: 'Selecionar Empresa',
-            value: _controller.selectedCompany ?? 'Todas',
+            value: _controller.selectedCompany,
             items: accountNames,
             onChanged: (value) {
               if (value != null) {

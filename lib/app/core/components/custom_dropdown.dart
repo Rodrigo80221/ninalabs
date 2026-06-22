@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 class CustomDropdown extends StatelessWidget {
   final String? label;
   final String hint;
-  final String value;
+  final String? value;
   final List<String> items;
   final ValueChanged<String?> onChanged;
 

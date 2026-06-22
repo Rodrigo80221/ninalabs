@@ -3,7 +3,7 @@ import '../../../core/services/baserow_service.dart';
 import '../../../core/services/webhook_service.dart';
 import '../../../core/models/api_response.dart';
 import '../models/content_model.dart';
-import '../models/schedule_model.dart';
+
 
 class DashboardController extends ChangeNotifier {
   final BaserowService _baserowService = BaserowService();
@@ -11,7 +11,6 @@ class DashboardController extends ChangeNotifier {
   List<AccountModel> _accounts = [];
   List<TemplateModel> _templates = [];
   List<ContentModel> _contents = [];
-  List<ScheduleModel> _schedules = [];
   
   bool isLoading = true;
   String? errorMessage;
@@ -28,7 +27,7 @@ class DashboardController extends ChangeNotifier {
   }
 
   // Navigation State
-  int _currentTabIndex = 0; // 0 = Em Construção, 1 = Finalizados
+  int _currentTabIndex = 0; // 0 = Finalizados, 1 = Em Construção
   
   // Filter & Pagination State
   String? _selectedCompany;
@@ -48,7 +47,7 @@ class DashboardController extends ChangeNotifier {
   List<TemplateModel> get allTemplates => _templates;
   
   List<TemplateModel> get templates {
-    if (_selectedCompany == null || _selectedCompany == 'Todas') {
+    if (_selectedCompany == null) {
       return _templates;
     } else {
       try {
@@ -95,19 +94,17 @@ class DashboardController extends ChangeNotifier {
       final results = await Future.wait([
         _baserowService.fetchAccounts(),
         _baserowService.fetchTemplates(),
-        _baserowService.fetchSchedules(),
       ]);
       
       _accounts = results[0] as List<AccountModel>;
       _templates = results[1] as List<TemplateModel>;
-      _schedules = results[2] as List<ScheduleModel>;
       
       if (_accounts.isNotEmpty) {
         _selectedCompany = _accounts.first.accountName; // Default select first
       }
 
       // We need the accounts list to resolve the content links properly
-      _contents = await _baserowService.fetchPosts(_accounts, _schedules);
+      _contents = await _baserowService.fetchPosts(_accounts);
 
     } catch (e) {
       errorMessage = e.toString();
@@ -119,9 +116,7 @@ class DashboardController extends ChangeNotifier {
 
   Future<void> updatePost(int id) async {
     try {
-      // Re-fetch schedules to ensure we have the latest status
-      _schedules = await _baserowService.fetchSchedules();
-      final updatedPost = await _baserowService.fetchPost(id, _accounts, _schedules);
+      final updatedPost = await _baserowService.fetchPost(id, _accounts);
       final index = _contents.indexWhere((c) => c.id == id);
       if (index != -1) {
         _contents[index] = updatedPost;
@@ -177,7 +172,7 @@ class DashboardController extends ChangeNotifier {
 
   List<ContentModel> _applyFilters(List<ContentModel> list) {
     return list.where((content) {
-      final matchCompany = _selectedCompany == null || _selectedCompany == 'Todas' || content.companyName == _selectedCompany;
+      final matchCompany = _selectedCompany == null || content.companyName == _selectedCompany;
       final matchTemplate = _selectedTemplate == 'Todos' || content.templateName == _selectedTemplate;
       return matchCompany && matchTemplate;
     }).toList();
