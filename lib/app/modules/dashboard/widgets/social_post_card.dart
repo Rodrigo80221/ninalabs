@@ -84,9 +84,9 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
       }
       
       if (!mounted) return;
-      // Check if all steps are completed
+      // Check if all steps are completed or if there is an error
       final allCompleted = widget.content.productionSteps.every((step) => step.isCompleted);
-      if (allCompleted) {
+      if (allCompleted || widget.content.hasError) {
         _stopWaiting();
       }
     });
@@ -125,16 +125,22 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                   widget.content.templateName,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
+                if (widget.content.status != 'Pendente')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: StatusBadge(status: widget.content.status, postDate: widget.content.postDate),
+                  ),
                 if (widget.content.status == 'Pendente' && widget.content.date.isNotEmpty)
-                  Text(
-                    'Última alteração: ${widget.content.date}',
-                    style: const TextStyle(color: AppColors.textLight, fontSize: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      'Última alteração: ${widget.content.date}',
+                      style: const TextStyle(color: AppColors.textLight, fontSize: 12),
+                    ),
                   ),
               ],
             ),
           ),
-          if (widget.content.status != 'Pendente')
-            StatusBadge(status: widget.content.status, postDate: widget.content.postDate),
           if (widget.content.status == 'Pendente')
             IconButton(
               icon: const Icon(Icons.more_vert),
@@ -268,7 +274,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   }
 
   Widget _buildTimeline(BuildContext context) {
-    if (widget.content.status != 'Pendente') return const SizedBox.shrink();
+    if (widget.content.status != 'Pendente' && !widget.content.hasError) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Column(
@@ -283,13 +289,14 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             final index = entry.key;
             final step = entry.value;
             final nextStepIndex = widget.content.productionSteps.indexWhere((s) => !s.isCompleted);
-            final isNextStep = _isWaitingForWebhook && index == nextStepIndex;
+            final isNextStep = _isWaitingForWebhook && index == nextStepIndex && !widget.content.hasError;
+            final isErrorStep = widget.content.hasError && index == nextStepIndex;
 
             final stepWidget = Row(
               children: [
                 Icon(
-                  step.isCompleted ? Icons.check_circle : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                  color: isNextStep ? AppColors.terracotta : (step.isCompleted ? Colors.green : Colors.grey),
+                  step.isCompleted ? Icons.check_circle : (isErrorStep ? Icons.radio_button_checked : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked)),
+                  color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (step.isCompleted ? Colors.green : Colors.grey)),
                   size: 16,
                 ),
                 const SizedBox(width: 6),
@@ -298,8 +305,8 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                     step.title,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isNextStep ? AppColors.terracotta : (step.isCompleted ? AppColors.textDark : AppColors.textLight),
-                      fontWeight: isNextStep ? FontWeight.bold : FontWeight.normal,
+                      color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (step.isCompleted ? AppColors.textDark : AppColors.textLight)),
+                      fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -390,9 +397,11 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final isPendingOrError = widget.content.status == 'Pendente' || widget.content.hasError;
+    
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
+        constraints: BoxConstraints(maxWidth: isPendingOrError ? 900 : 500),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
           decoration: BoxDecoration(
@@ -400,32 +409,30 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(8),
           ),
+          clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isDesktop = constraints.maxWidth > 600;
 
-              if (isDesktop) {
-                return Row(
+              if (isDesktop && isPendingOrError) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 5,
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
-                        child: _buildImage(context),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(context),
-                          const Divider(height: 1, color: AppColors.border),
-                          _buildCaption(context),
-                          _buildTimeline(context),
-                        ],
-                      ),
+                    _buildHeader(context),
+                    const Divider(height: 1, color: AppColors.border),
+                    _buildCaption(context),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: _buildImage(context),
+                        ),
+                        Expanded(
+                          flex: 4,
+                          child: _buildTimeline(context),
+                        ),
+                      ],
                     ),
                   ],
                 );
@@ -435,9 +442,9 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context),
-                  _buildImage(context),
                   _buildCaption(context),
-                  _buildTimeline(context),
+                  _buildImage(context),
+                  if (isPendingOrError) _buildTimeline(context),
                 ],
               );
             },

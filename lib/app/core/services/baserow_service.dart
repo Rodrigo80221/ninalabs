@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../modules/dashboard/models/content_model.dart';
 import '../../modules/dashboard/models/schedule_model.dart';
+import '../../modules/dashboard/models/google_voice_model.dart';
 
 class BaserowService {
   static const String _baseUrl = 'https://api.baserow.io/api/database/rows/table';
@@ -11,6 +12,8 @@ class BaserowService {
   static const String postsTableId = '812614';
   static const String templatesTableId = '862226';
   static const String schedulesTableId = '557294';
+  static const String musicOptionsTableId = '939807';
+  static const String googleVoicesTableId = '1042868';
 
   Future<List<AccountModel>> fetchAccounts() async {
     final response = await http.get(
@@ -227,41 +230,79 @@ class BaserowService {
     }
   }
 
-  Future<void> createTemplate({
+  Future<int> createTemplate({
     required String name,
     required String regras,
+    int? accountId,
+    int? idInstagramLinked,
+    String? usaMusicasDeFundoPreGravadas,
+    String? identidade,
+    int? versao,
   }) async {
+    final payload = <String, dynamic>{
+      'Name': name,
+      'Regras': regras,
+      'UsaMusicasDeFundoPreGravadas': usaMusicasDeFundoPreGravadas,
+    };
+    if (identidade != null && identidade.isNotEmpty) {
+      payload['Identidade'] = identidade;
+    }
+    if (versao != null) {
+      payload['Versao'] = versao;
+    }
+
+    if (accountId != null) {
+      payload['Empresas'] = [accountId];
+    }
+    if (idInstagramLinked != null) {
+      payload['IDInstragram'] = [idInstagramLinked];
+    }
+
     final response = await http.post(
       Uri.parse('$_baseUrl/$templatesTableId/?user_field_names=true'),
       headers: {
         'Authorization': 'Token $_token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'Name': name,
-        'Regras': regras,
-      }),
+      body: jsonEncode(payload),
     );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Falha ao criar template no Baserow: ${response.statusCode}');
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      return decoded['id'] as int;
+    } else {
+      throw Exception('Falha ao criar template no Baserow: ${response.statusCode} - ${response.body}');
     }
   }
 
   Future<void> updateTemplate(int id, {
     required String name,
     required String regras,
+    String? usaMusicasDeFundoPreGravadas,
+    String? identidade,
+    int? versao,
   }) async {
+    final payload = <String, dynamic>{
+      'Name': name,
+      'Regras': regras,
+      'UsaMusicasDeFundoPreGravadas': usaMusicasDeFundoPreGravadas,
+    };
+    if (identidade != null && identidade.isNotEmpty) {
+      payload['Identidade'] = identidade;
+    } else if (identidade != null && identidade.isEmpty) {
+      payload['Identidade'] = null; // Clear if explicitly set to empty
+    }
+    if (versao != null) {
+      payload['Versao'] = versao;
+    }
+
     final response = await http.patch(
       Uri.parse('$_baseUrl/$templatesTableId/$id/?user_field_names=true'),
       headers: {
         'Authorization': 'Token $_token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'Name': name,
-        'Regras': regras,
-      }),
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -283,6 +324,62 @@ class BaserowService {
       return results.map((json) => TemplateModel.fromJson(json)).toList();
     } else {
       throw Exception('Falha ao carregar os templates do Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<List<String>> fetchMusicOptions() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$musicOptionsTableId/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final List results = decoded['results'] ?? [];
+      return results
+          .map((json) => json['Name'] ?? json['field_8169412'])
+          .where((name) => name != null && name.toString().isNotEmpty)
+          .map((name) => name.toString())
+          .toSet() // to get distinct values
+          .toList();
+    } else {
+      throw Exception('Falha ao carregar opções de música do Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<List<GoogleVoiceModel>> fetchGoogleVoices() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$googleVoicesTableId/?user_field_names=true&size=200'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final List results = decoded['results'] ?? [];
+      return results.map((json) => GoogleVoiceModel.fromJson(json)).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    } else {
+      throw Exception('Falha ao carregar vozes do Google do Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<GoogleVoiceModel> fetchGoogleVoice(int id) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$googleVoicesTableId/$id/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      return GoogleVoiceModel.fromJson(decoded);
+    } else {
+      throw Exception('Falha ao carregar a voz do Google do Baserow: ${response.statusCode}');
     }
   }
 

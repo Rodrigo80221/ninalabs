@@ -35,7 +35,7 @@ class DashboardController extends ChangeNotifier {
   int _feedLimit = 10;
 
   DashboardController() {
-    _loadData();
+    loadData();
   }
 
   // Getters
@@ -84,7 +84,7 @@ class DashboardController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadData() async {
+  Future<void> loadData() async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -99,12 +99,25 @@ class DashboardController extends ChangeNotifier {
       _accounts = results[0] as List<AccountModel>;
       _templates = results[1] as List<TemplateModel>;
       
-      if (_accounts.isNotEmpty) {
+      if (_accounts.isNotEmpty && _selectedCompany == null) {
         _selectedCompany = _accounts.first.accountName; // Default select first
+      } else if (_selectedCompany != null) {
+        final companyExists = _accounts.any((a) => a.accountName == _selectedCompany);
+        if (!companyExists) {
+          _selectedCompany = _accounts.isNotEmpty ? _accounts.first.accountName : null;
+          _selectedTemplate = 'Todos';
+        }
       }
 
       // We need the accounts list to resolve the content links properly
       _contents = await _baserowService.fetchPosts(_accounts);
+
+      if (_selectedTemplate != 'Todos') {
+        final templateExists = _templates.any((t) => t.name == _selectedTemplate);
+        if (!templateExists) {
+          _selectedTemplate = 'Todos';
+        }
+      }
 
     } catch (e) {
       errorMessage = e.toString();
@@ -149,7 +162,7 @@ class DashboardController extends ChangeNotifier {
 
       // Adiciona na timeline imediatamente
       pollingPostIds.add(idRow);
-      await _loadData();
+      await loadData();
 
       return ApiResponse(success: true);
     } catch (e) {

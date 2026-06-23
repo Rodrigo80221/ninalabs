@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'dart:convert';
 import '../../core/components/custom_dropdown.dart';
 import '../../core/theme/app_colors.dart';
 import 'controllers/dashboard_controller.dart';
@@ -36,19 +37,57 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {});
   }
 
+  DateTime _getDefaultDate() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return DateTime(tomorrow.year, tomorrow.month, tomorrow.day, _lastSelectedTime.hour, _lastSelectedTime.minute);
+  }
+
+  DateTime _getSuggestedDateForTemplate(String templateName) {
+    if (templateName == 'Todos') return _getDefaultDate();
+    try {
+      final t = _controller.allTemplates.firstWhere((t) => t.name == templateName);
+      if (t.regras != null) {
+        final map = jsonDecode(t.regras!);
+        final dias = map['diasPublicacao'];
+        final horario = map['horarioPublicacao'];
+        if (dias is List && dias.isNotEmpty && horario is String && horario.isNotEmpty) {
+          final timeParts = horario.split(':');
+          if (timeParts.length == 2) {
+            final h = int.parse(timeParts[0]);
+            final m = int.parse(timeParts[1]);
+            
+            final allowedWeekdays = <int>{};
+            for (var dia in dias) {
+              if (dia == 'Segunda') allowedWeekdays.add(1);
+              if (dia == 'Terça') allowedWeekdays.add(2);
+              if (dia == 'Quarta') allowedWeekdays.add(3);
+              if (dia == 'Quinta') allowedWeekdays.add(4);
+              if (dia == 'Sexta') allowedWeekdays.add(5);
+              if (dia == 'Sábado') allowedWeekdays.add(6);
+              if (dia == 'Domingo') allowedWeekdays.add(7);
+            }
+            
+            if (allowedWeekdays.isNotEmpty) {
+              final now = DateTime.now();
+              for (int i = 1; i <= 7; i++) {
+                final candidate = now.add(Duration(days: i));
+                if (allowedWeekdays.contains(candidate.weekday)) {
+                  return DateTime(candidate.year, candidate.month, candidate.day, h, m);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return _getDefaultDate();
+  }
+
   void _showCreatePostDialog() {
     String? selectedEmpresa = _controller.selectedCompany;
     String selectedTemplate = _controller.selectedTemplate;
     
-    final now = DateTime.now();
-    final tomorrow = now.add(const Duration(days: 1));
-    DateTime? selectedDate = DateTime(
-      tomorrow.year, 
-      tomorrow.month, 
-      tomorrow.day, 
-      _lastSelectedTime.hour, 
-      _lastSelectedTime.minute,
-    );
+    DateTime? selectedDate = _getSuggestedDateForTemplate(selectedTemplate);
 
     showDialog(
       context: context,
@@ -91,6 +130,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         setStateDialog(() {
                           selectedEmpresa = value;
                           selectedTemplate = 'Todos';
+                          selectedDate = _getSuggestedDateForTemplate(selectedTemplate);
                         });
                       }
                     },
@@ -105,6 +145,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       if (value != null) {
                         setStateDialog(() {
                           selectedTemplate = value;
+                          selectedDate = _getSuggestedDateForTemplate(selectedTemplate);
                         });
                       }
                     },
@@ -246,34 +287,39 @@ class _DashboardPageState extends State<DashboardPage> {
             ListTile(
               leading: const Icon(Icons.business, color: AppColors.textDark),
               title: const Text('Empresa', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
                 final companyName = _controller.selectedCompany;
+                bool? result;
                 if (companyName != null) {
                   try {
                     final company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
-                    Navigator.push(
+                    result = await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => EmpresaFormPage(account: company)),
                     );
                   } catch (e) {
-                    Navigator.push(
+                    result = await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
                     );
                   }
                 } else {
-                  Navigator.push(
+                  result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
                   );
+                }
+                
+                if (result == true) {
+                  _controller.loadData();
                 }
               },
             ),
             ListTile(
               leading: const Icon(Icons.file_copy, color: AppColors.textDark),
               title: const Text('Templates', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
                 final companyName = _controller.selectedCompany;
                 AccountModel? company;
@@ -282,10 +328,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
                   } catch (_) {}
                 }
-                Navigator.push(
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => TemplatesPage(account: company)),
                 );
+                
+                if (result == true) {
+                  _controller.loadData();
+                }
               },
             ),
           ],

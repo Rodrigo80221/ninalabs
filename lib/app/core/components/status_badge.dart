@@ -9,10 +9,11 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isError = status.toLowerCase().contains('erro');
     final bool isPending = status.toLowerCase() == 'pendente';
     final bool isScheduled = status.toLowerCase() == 'agendado';
-    final Color bgColor = isPending ? AppColors.statusPendingBg : (isScheduled ? AppColors.quartzPink : AppColors.statusPostedBg);
-    final Color textColor = isPending ? AppColors.statusPendingText : (isScheduled ? AppColors.terracotta : AppColors.statusPostedText);
+    final Color bgColor = isError ? Colors.red.withOpacity(0.1) : (isPending ? AppColors.statusPendingBg : (isScheduled ? AppColors.quartzPink : AppColors.statusPostedBg));
+    final Color textColor = isError ? Colors.red : (isPending ? AppColors.statusPendingText : (isScheduled ? AppColors.terracotta : AppColors.statusPostedText));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -22,9 +23,9 @@ class StatusBadge extends StatelessWidget {
       ),
       child: Text(
         isScheduled && postDate != null && postDate!.isNotEmpty
-            ? 'AGENDADO: $postDate'
+            ? 'Data Agendamento: $postDate'
             : (!isPending && !isScheduled && postDate != null && postDate!.isNotEmpty)
-                ? 'POSTADO: $postDate'
+                ? 'Data Postagem: $postDate'
                 : status.toUpperCase(),
         style: TextStyle(
           color: textColor,

@@ -42,14 +42,33 @@ class TemplateModel {
   final int id;
   final String name;
   final String? regras;
+  final String? usaMusicasDeFundoPreGravadas;
+  final String? identidade;
+  final int versao;
 
-  TemplateModel({required this.id, required this.name, this.regras});
+  TemplateModel({
+    required this.id,
+    required this.name,
+    this.regras,
+    this.usaMusicasDeFundoPreGravadas,
+    this.identidade,
+    this.versao = 1,
+  });
 
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
+    int v = 1;
+    final rawVersao = json['Versao'] ?? json['field_7981691'];
+    if (rawVersao is int) v = rawVersao;
+    else if (rawVersao is double) v = rawVersao.toInt();
+    else if (rawVersao is String) v = int.tryParse(rawVersao) ?? 1;
+
     return TemplateModel(
       id: json['id'] ?? 0,
       name: json['Name'] ?? json['field_7441612'] ?? 'Template Desconhecido',
       regras: json['Regras'] ?? json['field_9175683'],
+      usaMusicasDeFundoPreGravadas: json['UsaMusicasDeFundoPreGravadas'] ?? json['field_8071084'],
+      identidade: json['Identidade'] ?? json['field_9175684'],
+      versao: v,
     );
   }
 }
@@ -75,6 +94,7 @@ class ContentModel {
   final int templateId;
   final List<ContentProductionStep> productionSteps;
   int? linkedScheduleId;
+  final bool hasError;
 
   ContentModel({
     required this.id,
@@ -90,6 +110,7 @@ class ContentModel {
     required this.templateId,
     required this.productionSteps,
     this.linkedScheduleId,
+    this.hasError = false,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
@@ -112,8 +133,19 @@ class ContentModel {
     String st = 'Pendente';
     String? pDate;
     int? parsedLinkedScheduleId;
+    bool hasErr = false;
+
+    final rawStatus = json['Status'] ?? json['field_8445020'];
+    if (rawStatus != null && rawStatus.toString().trim().isNotEmpty) {
+      final textStatus = rawStatus.toString().trim();
+      if (textStatus.toLowerCase().contains('erro')) {
+        hasErr = true;
+        st = textStatus;
+      }
+    }
+
     final idPostagemList = json['idPostagemInstagram'] ?? json['field_7028349'];
-    if (idPostagemList != null) {
+    if (!hasErr && idPostagemList != null) {
       if (idPostagemList is List && idPostagemList.isNotEmpty) {
         parsedLinkedScheduleId = idPostagemList.first['id'];
         st = 'Agendado';
@@ -278,7 +310,4 @@ class ContentModel {
       companyId: cId,
       templateId: tId,
       productionSteps: steps,
-    );
-  }
-}
 

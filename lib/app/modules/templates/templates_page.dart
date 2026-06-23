@@ -62,7 +62,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const TemplateFormPage(),
+              builder: (context) => TemplateFormPage(account: widget.account),
             ),
           );
           if (result == true) {
@@ -114,7 +114,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => TemplateFormPage(template: template),
+                builder: (context) => TemplateFormPage(template: template, account: widget.account),
               ),
             );
             if (result == true) {
