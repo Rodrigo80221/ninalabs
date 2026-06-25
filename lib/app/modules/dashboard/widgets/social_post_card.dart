@@ -30,7 +30,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   bool _isExpanded = false;
   bool _isLoading = false;
   bool _isWaitingForWebhook = false;
-  int _secondsRemaining = 600; // 10 minutes
+  int _secondsElapsed = 0;
   Timer? _countdownTimer;
   Timer? _refreshTimer;
   late AnimationController _animationController;
@@ -59,7 +59,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     if (widget.onPollingChanged != null) widget.onPollingChanged!(true);
     setState(() {
       _isWaitingForWebhook = true;
-      _secondsRemaining = 600;
+      _secondsElapsed = 0;
     });
 
     _animationController.repeat();
@@ -70,11 +70,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
       setState(() {
-        if (_secondsRemaining > 0) {
-          _secondsRemaining--;
-        } else {
-          _stopWaiting();
-        }
+        _secondsElapsed++;
       });
     });
 
@@ -275,6 +271,10 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
 
   Widget _buildTimeline(BuildContext context) {
     if (widget.content.status != 'Pendente' && !widget.content.hasError) return const SizedBox.shrink();
+
+    final lastCompletedIndex = widget.content.productionSteps.lastIndexWhere((s) => s.isCompleted);
+    final nextStepIndex = lastCompletedIndex + 1 < widget.content.productionSteps.length ? lastCompletedIndex + 1 : -1;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Column(
@@ -285,18 +285,20 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textDark),
           ),
           const SizedBox(height: 8),
+
           ...widget.content.productionSteps.asMap().entries.map((entry) {
             final index = entry.key;
             final step = entry.value;
-            final nextStepIndex = widget.content.productionSteps.indexWhere((s) => !s.isCompleted);
+            
+            final isVisuallyCompleted = index <= lastCompletedIndex;
             final isNextStep = _isWaitingForWebhook && index == nextStepIndex && !widget.content.hasError;
             final isErrorStep = widget.content.hasError && index == nextStepIndex;
 
             final stepWidget = Row(
               children: [
                 Icon(
-                  step.isCompleted ? Icons.check_circle : (isErrorStep ? Icons.radio_button_checked : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked)),
-                  color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (step.isCompleted ? Colors.green : Colors.grey)),
+                  isVisuallyCompleted ? Icons.check_circle : (isErrorStep ? Icons.radio_button_checked : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked)),
+                  color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? Colors.green : Colors.grey)),
                   size: 16,
                 ),
                 const SizedBox(width: 6),
@@ -305,7 +307,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                     step.title,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (step.isCompleted ? AppColors.textDark : AppColors.textLight)),
+                      color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.textDark : AppColors.textLight)),
                       fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -381,7 +383,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Aguardando... ${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}',
+                              'Aguardando... ${(_secondsElapsed ~/ 60).toString().padLeft(2, '0')}:${(_secondsElapsed % 60).toString().padLeft(2, '0')}',
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ],

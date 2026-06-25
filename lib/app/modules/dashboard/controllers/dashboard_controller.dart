@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/baserow_service.dart';
 import '../../../core/services/webhook_service.dart';
 import '../../../core/models/api_response.dart';
@@ -90,6 +91,12 @@ class DashboardController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _selectedCompany ??= prefs.getString('selectedCompany');
+      if (_selectedTemplate == 'Todos') {
+        _selectedTemplate = prefs.getString('selectedTemplate') ?? 'Todos';
+      }
+
       // Fetch data in parallel
       final results = await Future.wait([
         _baserowService.fetchAccounts(),
@@ -196,16 +203,23 @@ class DashboardController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCompany(String company) {
+  void setCompany(String company) async {
     _selectedCompany = company;
     _selectedTemplate = 'Todos'; // Reset template on company change
     _feedLimit = 10; // Reset pagination
     notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedCompany', company);
+    await prefs.setString('selectedTemplate', 'Todos');
   }
 
-  void setTemplate(String template) {
+  void setTemplate(String template) async {
     _selectedTemplate = template;
     _feedLimit = 10; // Reset pagination
     notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedTemplate', template);
   }
 }

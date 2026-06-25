@@ -229,6 +229,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!);
                       if (apiResponse.success && mounted) {
                         Navigator.of(context).pop();
+                        _controller.setCompany(company.accountName);
+                        _controller.setTemplate(template.name);
                         _controller.setTabIndex(1); // Mudar para "Em Construção"
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Criação de conteúdo iniciada com sucesso!'), backgroundColor: Colors.green),
@@ -333,8 +335,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   MaterialPageRoute(builder: (context) => TemplatesPage(account: company)),
                 );
                 
-                if (result == true) {
-                  _controller.loadData();
+                if (result != null) {
+                  await _controller.loadData();
+                  if (result is String) {
+                    _controller.setTemplate(result);
+                  }
                 }
               },
             ),

@@ -17,6 +17,8 @@ class _TemplatesPageState extends State<TemplatesPage> {
   List<TemplateModel> _templates = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String? _lastSavedTemplateName;
+  bool _dataChanged = false;
 
   @override
   void initState() {
@@ -52,8 +54,13 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop(_lastSavedTemplateName ?? (_dataChanged ? true : null));
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Templates'),
       ),
       body: _buildBody(),
@@ -65,7 +72,9 @@ class _TemplatesPageState extends State<TemplatesPage> {
               builder: (context) => TemplateFormPage(account: widget.account),
             ),
           );
-          if (result == true) {
+          if (result != null) {
+            if (result is String) _lastSavedTemplateName = result;
+            _dataChanged = true;
             _loadTemplates();
           }
         },
@@ -117,7 +126,9 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 builder: (context) => TemplateFormPage(template: template, account: widget.account),
               ),
             );
-            if (result == true) {
+            if (result != null) {
+              if (result is String) _lastSavedTemplateName = result;
+              _dataChanged = true;
               _loadTemplates();
             }
           },

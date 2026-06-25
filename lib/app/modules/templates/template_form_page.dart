@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:super_clipboard/super_clipboard.dart';
+import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import '../../core/services/baserow_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../dashboard/models/content_model.dart';
 import '../dashboard/models/google_voice_model.dart';
+import 'widgets/subtitle_config_widget.dart';
 import 'package:just_audio/just_audio.dart';
 
 class TemplateFormPage extends StatefulWidget {
@@ -22,6 +26,57 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
   final BaserowService _baserowService = BaserowService();
   bool _isLoading = false;
 
+  late QuillController _quillIdentidadeController;
+  late QuillController _quillInformacoesController;
+  final _identidadeFocusNode = FocusNode();
+  final _informacoesFocusNode = FocusNode();
+
+  QuillController _createQuillController(Document? doc, {TextSelection? selection}) {
+    return QuillController(
+      document: doc ?? Document(),
+      selection: selection ?? const TextSelection.collapsed(offset: 0),
+      config: QuillControllerConfig(
+        clipboardConfig: QuillClipboardConfig(
+          onClipboardPaste: () async {
+            return true;
+          },
+        ),
+      ),
+    );
+  }
+
+  void _onPaste(ClipboardReadEvent event) async {
+    final focusNode = _identidadeFocusNode.hasFocus ? _identidadeFocusNode : (_informacoesFocusNode.hasFocus ? _informacoesFocusNode : null);
+    if (focusNode == null) return;
+    final controller = _identidadeFocusNode.hasFocus ? _quillIdentidadeController : _quillInformacoesController;
+
+    try {
+      final reader = await event.getClipboardReader();
+      if (reader.canProvide(Formats.htmlText)) {
+        var html = await reader.readValue(Formats.htmlText);
+        if (html != null && html.isNotEmpty) {
+          html = html.replaceAll(RegExp(r'<b\s+[^>]*id="docs-internal-guid-[^>]+>'), '');
+          if (html.endsWith('</b>')) {
+            html = html.substring(0, html.length - 4);
+          }
+          final delta = HtmlToDelta().convert(html);
+          final index = controller.selection.baseOffset;
+          final length = controller.selection.extentOffset - index;
+          controller.replaceText(index, length, delta, null);
+        }
+      } else if (reader.canProvide(Formats.plainText)) {
+        final text = await reader.readValue(Formats.plainText);
+        if (text != null && text.isNotEmpty) {
+          final index = controller.selection.baseOffset;
+          final length = controller.selection.extentOffset - index;
+          controller.replaceText(index, length, text, null);
+        }
+      }
+    } catch (e) {
+      debugPrint("Erro ao colar: $e");
+    }
+  }
+
   int _versaoOriginal = 1;
   int _versaoAtual = 1;
   bool _versaoIncrementada = false;
@@ -37,6 +92,9 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
   @override
   void initState() {
     super.initState();
+    ClipboardEvents.instance?.registerPasteEventListener(_onPaste);
+    _quillIdentidadeController = _createQuillController(null);
+    _quillInformacoesController = _createQuillController(null);
     _loadInitialData();
   }
 
@@ -47,11 +105,33 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
       _nameController.text = widget.template!.name;
       _selectedMusicOption = widget.template!.usaMusicasDeFundoPreGravadas;
       _formData['identidade'] = widget.template!.identidade;
+      
+      if (widget.template!.identidade != null && widget.template!.identidade!.isNotEmpty) {
+        try {
+          final myJSON = jsonDecode(widget.template!.identidade!);
+          _quillIdentidadeController = _createQuillController(Document.fromJson(myJSON));
+        } catch (e) {
+          _quillIdentidadeController = _createQuillController(null);
+          _quillIdentidadeController.document.insert(0, widget.template!.identidade!);
+        }
+      }
+
       _versaoOriginal = widget.template!.versao;
       _versaoAtual = _versaoOriginal;
       if (widget.template!.regras != null && widget.template!.regras!.isNotEmpty) {
         try {
           _formData = jsonDecode(widget.template!.regras!);
+          
+          String infoStr = _formData['informacoesAdicionais']?.toString() ?? '';
+          if (infoStr.isNotEmpty) {
+            try {
+              final myJSON = jsonDecode(infoStr);
+              _quillInformacoesController = _createQuillController(Document.fromJson(myJSON));
+            } catch (e) {
+              _quillInformacoesController = _createQuillController(null);
+              _quillInformacoesController.document.insert(0, infoStr);
+            }
+          }
           
           if (_formData['utilizaNarrador'] == 'Sim' && _formData.containsKey('vozNarrador')) {
             final voz = _formData['vozNarrador'].toString();
@@ -121,8 +201,13 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
 
   @override
   void dispose() {
+    ClipboardEvents.instance?.unregisterPasteEventListener(_onPaste);
     _nameController.dispose();
     _audioPlayer.dispose();
+    _quillIdentidadeController.dispose();
+    _quillInformacoesController.dispose();
+    _identidadeFocusNode.dispose();
+    _informacoesFocusNode.dispose();
     super.dispose();
   }
 
@@ -133,6 +218,9 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
 
     try {
       final name = _nameController.text;
+
+      _formData['identidade'] = jsonEncode(_quillIdentidadeController.document.toDelta().toJson());
+      _formData['informacoesAdicionais'] = jsonEncode(_quillInformacoesController.document.toDelta().toJson());
 
       final formDataToSave = Map<String, dynamic>.from(_formData);
 
@@ -224,7 +312,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
       }
 
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, name);
       }
     } catch (e) {
       if (mounted) {
@@ -240,6 +328,109 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
   }
 
   // --- UI Helpers ---
+
+  Widget _buildQuillEditor(String title, QuillController controller, FocusNode focusNode) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
+              IconButton(
+                icon: const Icon(Icons.fullscreen),
+                onPressed: () => _showFullScreenEditor(title, controller, focusNode),
+                tooltip: 'Maximizar',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          QuillSimpleToolbar(
+            controller: controller,
+            config: const QuillSimpleToolbarConfig(
+              showFontFamily: false,
+              showFontSize: false,
+              showAlignmentButtons: true,
+              showBackgroundColorButton: false,
+              showColorButton: false,
+              showSubscript: false,
+              showSuperscript: false,
+            ),
+          ),
+          Container(
+            height: 200,
+            margin: const EdgeInsets.only(top: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: QuillEditor.basic(
+              controller: controller,
+              focusNode: focusNode,
+              config: const QuillEditorConfig(
+                padding: EdgeInsets.all(16.0),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreenEditor(String title, QuillController controller, FocusNode focusNode) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.fullscreen_exit),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              QuillSimpleToolbar(
+                controller: controller,
+                config: const QuillSimpleToolbarConfig(
+                  showFontFamily: false,
+                  showFontSize: false,
+                  showAlignmentButtons: true,
+                  showBackgroundColorButton: false,
+                  showColorButton: false,
+                  showSubscript: false,
+                  showSuperscript: false,
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: QuillEditor.basic(
+                    controller: controller,
+                    focusNode: focusNode,
+                    config: const QuillEditorConfig(
+                      padding: EdgeInsets.all(16.0),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      fullscreenDialog: true,
+    ));
+  }
 
   void _updateForm(String key, dynamic value) {
     setState(() {
@@ -579,8 +770,8 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 ],
               ),
               if (_getString('usoImagemReferencia') != 'Nenhuma imagem usa referência') ...[
-                _buildTextField('Código ou URL da imagem de referência (Se "Não", escreva "Não possui")', 'idImagemReferencia'),
-                _buildTextField('Descrição de Perfil (Características do ator/atriz)', 'identidade', maxLines: 3),
+                _buildTextField('Código ou URL da imagem de referência', 'idImagemReferencia'),
+                _buildQuillEditor('Descrição de Perfil (Características do ator/atriz)', _quillIdentidadeController, _identidadeFocusNode),
               ],
             ],
           ),
@@ -658,8 +849,18 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               _buildYesNo('Inclui legenda?', 'incluiLegenda'),
               if (usaLegenda) ...[
                 _buildYesNo('Inclui cor de legenda personalizada?', 'incluiCorLegendaPersonalizada'),
-                _buildTextField('Configuração de legenda PT', 'configLegendaPT', maxLines: 4),
-                _buildTextField('Configuração de legenda EN', 'configLegendaEN', maxLines: 4),
+                if (_getString('incluiCorLegendaPersonalizada') == 'Sim') ...[
+                  SubtitleConfigWidget(
+                    title: 'Configuração de legenda PT',
+                    initialValue: _getString('configLegendaPT'),
+                    onChanged: (val) => _updateForm('configLegendaPT', val),
+                  ),
+                  SubtitleConfigWidget(
+                    title: 'Configuração de legenda EN',
+                    initialValue: _getString('configLegendaEN'),
+                    onChanged: (val) => _updateForm('configLegendaEN', val),
+                  ),
+                ],
               ],
             ],
           ),
@@ -707,7 +908,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
             children: [
               _buildYesNo('Utiliza pesquisa de tendências e conteúdo na web?', 'utilizaPesquisa'),
               _buildCheckboxList('Objetivo do Conteúdo', 'objetivoConteudo', [
-                'Vender produto', 'Divulgar serviço', 'Ganhar seguidores', 'Engajar audiência',
+                'Vender produto', 'Divulgar serviço', 'Engajar audiência',
                 'Educar público', 'Fortalecer marca', 'Gerar leads', 'Gerar tráfego para site', 'Atrair seguidores'
               ]),
               _buildDropdown('Estilo do Conteúdo', 'estiloConteudo', [
@@ -743,7 +944,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               _buildDropdown('Nível de criatividade permitido para a IA', 'nivelCriatividade', [
                 'Baixo', 'Médio', 'Alto', 'Muito alto'
               ]),
-              _buildTextField('Informações adicionais para orientar a IA', 'informacoesAdicionais', maxLines: 6),
+              _buildQuillEditor('Informações adicionais para orientar a IA', _quillInformacoesController, _informacoesFocusNode),
             ],
           ),
         ),

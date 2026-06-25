@@ -310,4 +310,8 @@ class ContentModel {
       companyId: cId,
       templateId: tId,
       productionSteps: steps,
-
+      linkedScheduleId: parsedLinkedScheduleId,
+      hasError: hasErr,
+    );
+  }
+}

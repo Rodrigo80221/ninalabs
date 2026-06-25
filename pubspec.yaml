@@ -41,6 +41,8 @@ dependencies:
   flutter_quill_extensions: ^11.0.0
   flutter_quill_delta_from_html: ^1.5.3
   just_audio: ^0.10.5
+  shared_preferences: ^2.5.5
+  flutter_colorpicker: ^1.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
