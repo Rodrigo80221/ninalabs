@@ -81,6 +81,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
         backgroundColor: AppColors.terracotta,
         child: const Icon(Icons.add, color: Colors.white),
       ),
+      ),
     );
   }
 
