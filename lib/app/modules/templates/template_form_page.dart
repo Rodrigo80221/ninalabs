@@ -291,6 +291,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
       }
 
       final identidadeValue = formDataToSave.remove('identidade');
+      formDataToSave.remove('modoGeracaoImagens');
 
       final regrasJson = const JsonEncoder.withIndent('  ').convert(formDataToSave);
 
@@ -789,15 +790,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildRadio(
-                'Modo de geração das imagens',
-                'modoGeracaoImagens',
-                [
-                  'Imagens distintas',
-                  'Imagem de Referência (New Text Advertisement — Under Development)'
-                ],
-                disabledOptions: ['Imagem de Referência (New Text Advertisement — Under Development)'],
-              ),
+
               _buildDropdown('Quantidade Máxima de Imagens Geradas', 'qtdMaximaImagens', List.generate(30, (i) => (i + 1).toString())),
               _buildRadio(
                 'Tecnologias de geração de cada Imagem',
@@ -811,7 +804,13 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   'Todas Imagens com HTML',
                   'Vou enviar a imagem (em desenvolvimento)'
                 ],
-                disabledOptions: ['Vou enviar a imagem (em desenvolvimento)'],
+                disabledOptions: [
+                  'Vou enviar a imagem (em desenvolvimento)',
+                  if (_getString('qtdMaximaImagens') == '1') ...[
+                    'Imagem 1 com Nano Banana 3 e as demais com Nano Banana 2.5',
+                    'Imagem 1 com Nano Banana 3 e as demais com gemini-3.1-flash-image',
+                  ],
+                ],
               ),
               _buildRadio(
                 'Usa Imagem de um ator ou atriz de referência?',
@@ -820,6 +819,10 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   'Apenas imagem de capa usa referência; demais não usam',
                   'Todas as imagens usam referência',
                   'Nenhuma imagem usa referência'
+                ],
+                disabledOptions: [
+                  if (_getString('qtdMaximaImagens') == '1')
+                    'Apenas imagem de capa usa referência; demais não usam',
                 ],
               ),
               if (_getString('usoImagemReferencia') != 'Nenhuma imagem usa referência') ...[

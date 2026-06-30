@@ -82,6 +82,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
+      ),
     );
   }
 
