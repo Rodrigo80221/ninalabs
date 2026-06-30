@@ -86,6 +86,7 @@ class ContentModel {
   final String templateName;
   String status;
   final String imageUrl;
+  final String? videoUrl;
   final String description;
   final String date;
   String? postDate;
@@ -94,7 +95,7 @@ class ContentModel {
   final int templateId;
   final List<ContentProductionStep> productionSteps;
   int? linkedScheduleId;
-  final bool hasError;
+  bool hasError;
 
   ContentModel({
     required this.id,
@@ -102,6 +103,7 @@ class ContentModel {
     required this.templateName,
     required this.status,
     required this.imageUrl,
+    this.videoUrl,
     required this.description,
     required this.date,
     this.postDate,
@@ -190,6 +192,13 @@ class ContentModel {
     final openingImage = json['ImagemDeAbertura'] ?? json['field_6964823'] as List?;
     if (openingImage != null && openingImage.isNotEmpty) {
       img = openingImage.first['url'] ?? img;
+    }
+
+    // 3.5. Resolve Video URL
+    String? vidUrl;
+    final videoLegenda = json['VideoComLegendaPT'] ?? json['field_7007172'];
+    if (videoLegenda is List && videoLegenda.isNotEmpty) {
+      vidUrl = videoLegenda.first['url'];
     }
 
     // 4. Resolve Description (Full DescricaoPost)
@@ -303,6 +312,7 @@ class ContentModel {
       templateName: templateStr,
       status: st,
       imageUrl: img,
+      videoUrl: vidUrl,
       description: descText,
       date: dateStr,
       postDate: pDate,

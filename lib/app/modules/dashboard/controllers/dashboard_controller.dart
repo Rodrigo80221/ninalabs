@@ -164,6 +164,13 @@ class DashboardController extends ChangeNotifier {
       ).then((response) {
         if (!response.success) {
           print('Erro no webhook em background: ${response.message}');
+          setPolling(idRow, false);
+          
+          final index = _contents.indexWhere((c) => c.id == idRow);
+          if (index != -1) {
+            _contents[index].hasError = true;
+          }
+          notifyListeners();
         }
       });
 

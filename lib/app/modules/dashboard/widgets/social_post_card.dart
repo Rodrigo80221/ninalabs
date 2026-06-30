@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/webhook_service.dart';
@@ -35,6 +37,10 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   Timer? _refreshTimer;
   late AnimationController _animationController;
 
+  VideoPlayerController? _videoPlayerController;
+  bool _isVideoInitialized = false;
+  bool _showVideoPlayer = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,10 +54,23 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   }
 
   @override
+  void didUpdateWidget(SocialPostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isInitiallyWaiting != oldWidget.isInitiallyWaiting) {
+      if (widget.isInitiallyWaiting && !_isWaitingForWebhook) {
+        _startWaiting();
+      } else if (!widget.isInitiallyWaiting && _isWaitingForWebhook) {
+        _stopWaiting();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _animationController.dispose();
     _countdownTimer?.cancel();
     _refreshTimer?.cancel();
+    _videoPlayerController?.dispose();
     super.dispose();
   }
 
@@ -206,27 +225,148 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   Widget _buildImage(BuildContext context) {
     return AspectRatio(
       aspectRatio: 4 / 5,
-      child: Container(
-        color: Colors.black,
-        width: double.infinity,
-        child: Image.network(
-          widget.content.imageUrl,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: AppColors.quartzPink.withAlpha(76),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.image_not_supported_outlined, size: 32, color: AppColors.terracotta),
-                SizedBox(height: 8),
-                Text(
-                  'Ainda sem imagem gerada',
-                  style: TextStyle(color: AppColors.terracotta, fontWeight: FontWeight.bold, fontSize: 10),
-                  textAlign: TextAlign.center,
+      child: GestureDetector(
+        onTap: () async {
+          if (widget.content.videoUrl != null) {
+            if (_showVideoPlayer) {
+              if (_isVideoInitialized && _videoPlayerController != null) {
+                if (_videoPlayerController!.value.isPlaying) {
+                  _videoPlayerController!.pause();
+                } else {
+                  _videoPlayerController!.play();
+                }
+                setState(() {});
+              }
+            } else {
+              setState(() {
+                _showVideoPlayer = true;
+              });
+              _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.content.videoUrl!));
+              _videoPlayerController!.addListener(() {
+                if (mounted) setState(() {});
+              });
+              await _videoPlayerController!.initialize();
+              if (mounted) {
+                setState(() {
+                  _isVideoInitialized = true;
+                });
+                _videoPlayerController!.play();
+              }
+            }
+          }
+        },
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (!_showVideoPlayer)
+              Container(
+                color: Colors.black,
+                width: double.infinity,
+                height: double.infinity,
+                child: Image.network(
+                  widget.content.imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: AppColors.quartzPink.withAlpha(76),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported_outlined, size: 32, color: AppColors.terracotta),
+                        SizedBox(height: 8),
+                        Text(
+                          'Ainda sem imagem gerada',
+                          style: TextStyle(color: AppColors.terracotta, fontWeight: FontWeight.bold, fontSize: 10),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            if (_showVideoPlayer && _isVideoInitialized && _videoPlayerController != null)
+              Container(
+                color: Colors.black,
+                width: double.infinity,
+                height: double.infinity,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Center(
+                      child: AspectRatio(
+                        aspectRatio: _videoPlayerController!.value.aspectRatio,
+                        child: VideoPlayer(_videoPlayerController!),
+                      ),
+                    ),
+                    Container(
+                      color: Colors.black54,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _videoPlayerController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    if (_videoPlayerController!.value.isPlaying) {
+                                      _videoPlayerController!.pause();
+                                    } else {
+                                      _videoPlayerController!.play();
+                                    }
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.stop, color: Colors.white),
+                                onPressed: () {
+                                  setState(() {
+                                    _videoPlayerController!.pause();
+                                    _videoPlayerController!.seekTo(Duration.zero);
+                                    _showVideoPlayer = false;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          VideoProgressIndicator(
+                            _videoPlayerController!,
+                            allowScrubbing: true,
+                            colors: const VideoProgressColors(
+                              playedColor: AppColors.terracotta,
+                              backgroundColor: Colors.white30,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_showVideoPlayer && !_isVideoInitialized)
+              const CircularProgressIndicator(color: AppColors.terracotta),
+              
+            if (!_showVideoPlayer && widget.content.videoUrl != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_circle_outline,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -336,32 +476,45 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (_isLoading || _isWaitingForWebhook) ? null : () async {
-                setState(() => _isLoading = true);
+              onPressed: (_isLoading || _isWaitingForWebhook) ? null : () {
+                setState(() {
+                  widget.content.hasError = false;
+                });
+                _startWaiting();
                 
-                final apiResponse = await WebhookService.continuarProducao(
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ação enviada com sucesso!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+
+                WebhookService.continuarProducao(
                   codigoEmpresa: widget.content.companyId,
                   codigoContrato: widget.content.templateId,
                   idRow: widget.content.id,
-                );
-                
-                if (!mounted) return;
-                setState(() => _isLoading = false);
-                
-                if (apiResponse.success) {
-                  _startWaiting();
-                }
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(apiResponse.success ? 'Ação enviada com sucesso!' : (apiResponse.message ?? 'Erro ao enviar ação para o webhook.')),
-                    backgroundColor: apiResponse.success ? Colors.green : AppColors.terracotta,
-                  ),
-                );
+                ).then((apiResponse) {
+                  if (!apiResponse.success) {
+                    if (mounted) {
+                      _stopWaiting();
+                      setState(() {
+                        widget.content.hasError = true;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(apiResponse.message ?? 'Erro ao enviar ação para o webhook.'),
+                          backgroundColor: AppColors.terracotta,
+                        ),
+                      );
+                    }
+                  }
+                });
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.terracotta,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey.shade300,
+                disabledForegroundColor: Colors.black54,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -371,7 +524,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                   ? const SizedBox(
                       height: 16,
                       width: 16,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : _isWaitingForWebhook
                       ? Row(
@@ -379,7 +532,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                           children: [
                             RotationTransition(
                               turns: _animationController,
-                              child: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                              child: const Icon(Icons.refresh, size: 16),
                             ),
                             const SizedBox(width: 8),
                             Text(

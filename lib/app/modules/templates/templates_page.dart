@@ -61,25 +61,26 @@ class _TemplatesPageState extends State<TemplatesPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-        title: const Text('Templates'),
-      ),
-      body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TemplateFormPage(account: widget.account),
-            ),
-          );
-          if (result != null) {
-            if (result is String) _lastSavedTemplateName = result;
-            _dataChanged = true;
-            _loadTemplates();
-          }
-        },
-        backgroundColor: AppColors.terracotta,
-        child: const Icon(Icons.add, color: Colors.white),
+          title: const Text('Templates'),
+        ),
+        body: _buildBody(),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TemplateFormPage(account: widget.account),
+              ),
+            );
+            if (result != null) {
+              if (result is String) _lastSavedTemplateName = result;
+              _dataChanged = true;
+              _loadTemplates();
+            }
+          },
+          backgroundColor: AppColors.terracotta,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }

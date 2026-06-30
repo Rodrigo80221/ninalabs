@@ -237,7 +237,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         formDataToSave.remove('vozNarradorElevenLabs');
         formDataToSave.remove('vozNarrador');
         formDataToSave.remove('incluiLegenda');
-        formDataToSave.remove('incluiCorLegendaPersonalizada');
+        formDataToSave.remove('idiomasLegenda');
         formDataToSave.remove('configLegendaPT');
         formDataToSave.remove('configLegendaEN');
         formDataToSave.remove('idiomaNarracao');
@@ -265,9 +265,23 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         }
 
         if (formDataToSave['incluiLegenda'] != 'Sim') {
-          formDataToSave.remove('incluiCorLegendaPersonalizada');
+          formDataToSave.remove('idiomasLegenda');
           formDataToSave.remove('configLegendaPT');
           formDataToSave.remove('configLegendaEN');
+        } else {
+          final idiomas = formDataToSave['idiomasLegenda'];
+          final List<String> idiomasList = [];
+          if (idiomas is List) {
+            idiomasList.addAll(idiomas.map((e) => e.toString()));
+          } else if (idiomas is String && idiomas.isNotEmpty) {
+            idiomasList.add(idiomas);
+          }
+          if (!idiomasList.contains('Português')) {
+            formDataToSave.remove('configLegendaPT');
+          }
+          if (!idiomasList.contains('Inglês')) {
+            formDataToSave.remove('configLegendaEN');
+          }
         }
       }
 
@@ -335,43 +349,81 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
-              IconButton(
-                icon: const Icon(Icons.fullscreen),
-                onPressed: () => _showFullScreenEditor(title, controller, focusNode),
-                tooltip: 'Maximizar',
-              ),
-            ],
-          ),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          QuillSimpleToolbar(
-            controller: controller,
-            config: const QuillSimpleToolbarConfig(
-              showFontFamily: false,
-              showFontSize: false,
-              showAlignmentButtons: true,
-              showBackgroundColorButton: false,
-              showColorButton: false,
-              showSubscript: false,
-              showSuperscript: false,
-            ),
-          ),
-          Container(
-            height: 200,
-            margin: const EdgeInsets.only(top: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: QuillEditor.basic(
-              controller: controller,
-              focusNode: focusNode,
-              config: const QuillEditorConfig(
-                padding: EdgeInsets.all(16.0),
+          InkWell(
+            onTap: () => _showFullScreenEditor(title, controller, focusNode),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: AnimatedBuilder(
+                      animation: controller,
+                      builder: (context, child) {
+                        final text = controller.document.toPlainText().trim();
+                        return Text(
+                          text.isEmpty ? 'Nenhum conteúdo adicionado...' : text,
+                          style: const TextStyle(color: Colors.black54),
+                          maxLines: 4,
+                          overflow: TextOverflow.fade,
+                        );
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withOpacity(0.0),
+                            Colors.white,
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                      ),
+                      child: const Icon(Icons.open_in_full, size: 16, color: Colors.black54),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Clique para editar',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -752,6 +804,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 'tecnologiasImagens',
                 [
                   'Imagem 1 com Nano Banana 3 e as demais com Nano Banana 2.5',
+                  'Imagem 1 com Nano Banana 3 e as demais com Gemini 3.1 Flash Image',
                   'Todas Imagens com Nano Banana 3',
                   'Todas Imagens com Nano Banana 2.5',
                   'Todas Imagens com Google Imagen',
@@ -848,19 +901,19 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               
               _buildYesNo('Inclui legenda?', 'incluiLegenda'),
               if (usaLegenda) ...[
-                _buildYesNo('Inclui cor de legenda personalizada?', 'incluiCorLegendaPersonalizada'),
-                if (_getString('incluiCorLegendaPersonalizada') == 'Sim') ...[
+                _buildCheckboxList('Idiomas da legenda', 'idiomasLegenda', ['Português', 'Inglês']),
+                if (_getList('idiomasLegenda').contains('Português'))
                   SubtitleConfigWidget(
                     title: 'Configuração de legenda PT',
                     initialValue: _getString('configLegendaPT'),
                     onChanged: (val) => _updateForm('configLegendaPT', val),
                   ),
+                if (_getList('idiomasLegenda').contains('Inglês'))
                   SubtitleConfigWidget(
                     title: 'Configuração de legenda EN',
                     initialValue: _getString('configLegendaEN'),
                     onChanged: (val) => _updateForm('configLegendaEN', val),
                   ),
-                ],
               ],
             ],
           ),
@@ -919,9 +972,6 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               ]),
               _buildDropdown('Nível de Viralidade', 'nivelViralidade', [
                 'Conteúdo seguro', 'Conteúdo forte', 'Conteúdo viral'
-              ]),
-              _buildDropdown('Idioma do Gancho', 'idiomaGancho', [
-                'Português', 'Inglês', 'Espanhol', 'Português + Inglês (misturado)'
               ]),
               if (isVideo)
                 _buildDropdown('Idioma da Narração', 'idiomaNarracao', [
