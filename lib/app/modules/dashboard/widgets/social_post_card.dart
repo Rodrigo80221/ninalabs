@@ -179,6 +179,31 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                           ),
                         ),
                         const SizedBox(height: 16),
+                        if (widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty) ...[
+                          ListTile(
+                            leading: const Icon(Icons.lightbulb_outline, color: AppColors.textDark),
+                            title: const Text('Ver Estratégia', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              showDialog(
+                                context: context,
+                                builder: (ctx2) => AlertDialog(
+                                  title: const Text('Estratégia de Conteúdo'),
+                                  content: SingleChildScrollView(
+                                    child: Text(widget.content.strategyText!),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx2).pop(),
+                                      child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(),
+                        ],
                         ListTile(
                           leading: const Icon(Icons.delete_outline, color: Colors.red),
                           title: const Text('Excluir', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),

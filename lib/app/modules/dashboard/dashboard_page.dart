@@ -92,6 +92,9 @@ class _DashboardPageState extends State<DashboardPage> {
     showDialog(
       context: context,
       builder: (context) {
+        bool isLoading = false;
+        bool apenasGerarIdeia = false;
+
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             final accountNames = _controller.accounts.map((a) => a.accountName).toList();
@@ -112,8 +115,6 @@ class _DashboardPageState extends State<DashboardPage> {
             if (!dialogTemplateNames.contains(selectedTemplate)) {
               selectedTemplate = 'Todos';
             }
-
-            bool isLoading = false;
 
             return AlertDialog(
               title: const Text('Criar Novo Conteúdo'),
@@ -204,6 +205,20 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text('Apenas gerar ideia', style: TextStyle(fontSize: 14)),
+                    value: apenasGerarIdeia,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (val) {
+                      if (val != null) {
+                        setStateDialog(() {
+                          apenasGerarIdeia = val;
+                        });
+                      }
+                    },
+                  ),
                 ],
               ),
               actions: [
@@ -226,7 +241,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       final company = _controller.accounts.firstWhere((a) => a.accountName == selectedEmpresa);
                       final template = _controller.allTemplates.firstWhere((t) => t.name == selectedTemplate);
 
-                      final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!);
+                      final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!, apenasGerarIdeia: apenasGerarIdeia);
                       if (apiResponse.success && mounted) {
                         Navigator.of(context).pop();
                         _controller.setCompany(company.accountName);

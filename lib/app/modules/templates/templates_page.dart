@@ -52,6 +52,46 @@ class _TemplatesPageState extends State<TemplatesPage> {
     }
   }
 
+  Future<void> _duplicateTemplate(TemplateModel template) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final newName = '${template.name} (Cópia)';
+      final newId = await _baserowService.createTemplate(
+        name: newName,
+        regras: template.regras ?? '{}',
+        accountId: widget.account?.id,
+        idInstagramLinked: widget.account?.idInstagramLinked,
+        usaMusicasDeFundoPreGravadas: template.usaMusicasDeFundoPreGravadas,
+        identidade: template.identidade,
+        versao: template.versao,
+      );
+
+      if (widget.account != null) {
+        widget.account!.templateIds.add(newId);
+      }
+
+      _dataChanged = true;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Template "$newName" duplicado com sucesso!'), backgroundColor: Colors.green),
+        );
+      }
+      await _loadTemplates();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao duplicar: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -81,7 +121,6 @@ class _TemplatesPageState extends State<TemplatesPage> {
           backgroundColor: AppColors.terracotta,
           child: const Icon(Icons.add, color: Colors.white),
         ),
-      ),
       ),
     );
   }
@@ -121,6 +160,11 @@ class _TemplatesPageState extends State<TemplatesPage> {
             child: Icon(Icons.file_copy, color: Colors.white),
           ),
           title: Text(template.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          trailing: IconButton(
+            icon: const Icon(Icons.copy, color: AppColors.terracotta),
+            tooltip: 'Duplicar Template',
+            onPressed: () => _duplicateTemplate(template),
+          ),
           onTap: () async {
             final result = await Navigator.push(
               context,

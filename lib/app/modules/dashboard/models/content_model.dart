@@ -96,6 +96,7 @@ class ContentModel {
   final List<ContentProductionStep> productionSteps;
   int? linkedScheduleId;
   bool hasError;
+  final String? strategyText;
 
   ContentModel({
     required this.id,
@@ -113,6 +114,7 @@ class ContentModel {
     required this.productionSteps,
     this.linkedScheduleId,
     this.hasError = false,
+    this.strategyText,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
@@ -322,6 +324,7 @@ class ContentModel {
       productionSteps: steps,
       linkedScheduleId: parsedLinkedScheduleId,
       hasError: hasErr,
+      strategyText: json['EstrategistaDeConteudo'] ?? json['field_6993999'],
     );
   }
 }

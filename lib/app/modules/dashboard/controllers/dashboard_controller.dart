@@ -147,7 +147,7 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  Future<ApiResponse> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate) async {
+  Future<ApiResponse> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate, {bool apenasGerarIdeia = false}) async {
     try {
       final idRow = await _baserowService.createPostRow(
         scheduleDate: scheduleDate,
@@ -161,6 +161,7 @@ class DashboardController extends ChangeNotifier {
         codigoContrato: codigoContrato,
         idRow: idRow,
         dataAgendamento: scheduleDate,
+        apenasGerarIdeia: apenasGerarIdeia,
       ).then((response) {
         if (!response.success) {
           print('Erro no webhook em background: ${response.message}');

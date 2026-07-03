@@ -53,6 +53,7 @@ class WebhookService {
     required int codigoContrato,
     required int idRow,
     required DateTime dataAgendamento,
+    bool apenasGerarIdeia = false,
   }) async {
     try {
       final response = await http.post(
@@ -62,7 +63,7 @@ class WebhookService {
           'codigoEmpresa': codigoEmpresa.toString(),
           'codigoContrato': codigoContrato.toString(),
           'idRow_InformarAquiRegistroDaTabelaHistoricoCriacaoDeRews': idRow.toString(),
-          'ApenasGerarIdeia?': false,
+          'ApenasGerarIdeia?': apenasGerarIdeia,
           'DataAgendamentoInstagram': dataAgendamento.toIso8601String(),
         }),
       );

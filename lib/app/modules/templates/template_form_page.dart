@@ -143,6 +143,29 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               _formData['vozNarradorGoogle'] = voz;
             }
           }
+          
+          for (var key in ['configLegendaPT', 'configLegendaEN']) {
+            if (_formData[key] is String) {
+              final text = _formData[key] as String;
+              if (text.startsWith('Resposta: ')) {
+                final map = <String, dynamic>{};
+                final parts = text.replaceFirst('Resposta: ', '').split(' | ');
+                for (var part in parts) {
+                  final kv = part.split(': ');
+                  if (kv.length == 2) {
+                    if (kv[0] == 'font_color') map['font_color'] = kv[1];
+                    if (kv[0] == 'font_border_color') map['font_border_color'] = kv[1];
+                    if (kv[0] == 'size') map['size'] = int.tryParse(kv[1]) ?? (key == 'configLegendaPT' ? 12 : 16);
+                    if (kv[0] == 'position_y') map['position_y'] = int.tryParse(kv[1]) ?? (key == 'configLegendaPT' ? 65 : 80);
+                    if (kv[0] == 'max_lines') map['max_lines'] = int.tryParse(kv[1]) ?? 2;
+                  }
+                }
+                map['max_lines'] ??= 2;
+                _formData[key] = map;
+              }
+            }
+          }
+
         } catch (e) {
           print('Erro ao carregar JSON das regras: $e');
         }
@@ -796,10 +819,11 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 'Tecnologias de geração de cada Imagem',
                 'tecnologiasImagens',
                 [
-                  'Imagem 1 com Nano Banana 3 e as demais com Nano Banana 2.5',
-                  'Imagem 1 com Nano Banana 3 e as demais com Gemini 3.1 Flash Image',
-                  'Todas Imagens com Nano Banana 3',
-                  'Todas Imagens com Nano Banana 2.5',
+                  'Imagem 1 com gemini-3-pro-image e as demais com gemini-2.5-pro-image',
+                  'Imagem 1 com gemini-3-pro-image e as demais com Gemini 3.1 Flash Image',
+                  'Todas Imagens com gemini-3-pro-image',
+                  'Todas Imagens com gemini-2.5-pro-image',
+                  'Todas Imagens com Gemini 3.1 Flash Image',
                   'Todas Imagens com Google Imagen',
                   'Todas Imagens com HTML',
                   'Vou enviar a imagem (em desenvolvimento)'
@@ -807,8 +831,8 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 disabledOptions: [
                   'Vou enviar a imagem (em desenvolvimento)',
                   if (_getString('qtdMaximaImagens') == '1') ...[
-                    'Imagem 1 com Nano Banana 3 e as demais com Nano Banana 2.5',
-                    'Imagem 1 com Nano Banana 3 e as demais com gemini-3.1-flash-image',
+                    'Imagem 1 com gemini-3-pro-image e as demais com gemini-2.5-pro-image',
+                    'Imagem 1 com gemini-3-pro-image e as demais com Gemini 3.1 Flash Image',
                   ],
                 ],
               ),
@@ -908,13 +932,15 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 if (_getList('idiomasLegenda').contains('Português'))
                   SubtitleConfigWidget(
                     title: 'Configuração de legenda PT',
-                    initialValue: _getString('configLegendaPT'),
+                    initialValue: _formData['configLegendaPT'],
+                    defaultPositionY: 65,
                     onChanged: (val) => _updateForm('configLegendaPT', val),
                   ),
                 if (_getList('idiomasLegenda').contains('Inglês'))
                   SubtitleConfigWidget(
                     title: 'Configuração de legenda EN',
-                    initialValue: _getString('configLegendaEN'),
+                    initialValue: _formData['configLegendaEN'],
+                    defaultPositionY: 80,
                     onChanged: (val) => _updateForm('configLegendaEN', val),
                   ),
               ],

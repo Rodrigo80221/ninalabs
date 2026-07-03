@@ -3,14 +3,16 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class SubtitleConfigWidget extends StatefulWidget {
   final String title;
-  final String initialValue;
-  final ValueChanged<String> onChanged;
+  final dynamic initialValue;
+  final ValueChanged<Map<String, dynamic>> onChanged;
+  final int defaultPositionY;
 
   const SubtitleConfigWidget({
     super.key,
     required this.title,
     required this.initialValue,
     required this.onChanged,
+    this.defaultPositionY = 80,
   });
 
   @override
@@ -21,37 +23,67 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
   String _fontColor = '#FFFFFF';
   String _fontBorderColor = '#000000';
   int _fontSize = 14;
+  int _positionY = 80;
+  int _maxLines = 2;
 
   late TextEditingController _fontColorController;
   late TextEditingController _fontBorderController;
+  late TextEditingController _positionYController;
+  late TextEditingController _maxLinesController;
 
   @override
   void initState() {
     super.initState();
+    _positionY = widget.defaultPositionY;
     _parseConfig(widget.initialValue);
     _fontColorController = TextEditingController(text: _fontColor);
     _fontBorderController = TextEditingController(text: _fontBorderColor);
+    _positionYController = TextEditingController(text: _positionY.toString());
+    _maxLinesController = TextEditingController(text: _maxLines.toString());
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _notifyChange();
+      }
+    });
   }
 
-  void _parseConfig(String text) {
-    if (text.isEmpty) return;
-    try {
-      final parts = text.replaceFirst('Resposta: ', '').split(' | ');
-      for (var part in parts) {
-        final kv = part.split(': ');
-        if (kv.length == 2) {
-          if (kv[0] == 'font_color') _fontColor = kv[1];
-          if (kv[0] == 'font_border_color') _fontBorderColor = kv[1];
-          if (kv[0] == 'size') _fontSize = int.tryParse(kv[1]) ?? 14;
+  void _parseConfig(dynamic value) {
+    if (value == null) return;
+    if (value is String) {
+      if (value.isEmpty) return;
+      try {
+        final parts = value.replaceFirst('Resposta: ', '').split(' | ');
+        for (var part in parts) {
+          final kv = part.split(': ');
+          if (kv.length == 2) {
+            if (kv[0] == 'font_color') _fontColor = kv[1];
+            if (kv[0] == 'font_border_color') _fontBorderColor = kv[1];
+            if (kv[0] == 'size') _fontSize = int.tryParse(kv[1]) ?? 14;
+            if (kv[0] == 'position_y') _positionY = int.tryParse(kv[1]) ?? widget.defaultPositionY;
+            if (kv[0] == 'max_lines') _maxLines = int.tryParse(kv[1]) ?? 2;
+          }
         }
+      } catch (e) {
+        debugPrint("Error parsing subtitle config string: $e");
       }
-    } catch (e) {
-      debugPrint("Error parsing subtitle config: $e");
+    } else if (value is Map) {
+      _fontColor = value['font_color'] ?? '#FFFFFF';
+      _fontBorderColor = value['font_border_color'] ?? '#000000';
+      _fontSize = value['size'] ?? 14;
+      _positionY = value['position_y'] ?? widget.defaultPositionY;
+      _maxLines = value['max_lines'] ?? 2;
     }
   }
 
   void _notifyChange() {
-    final result = 'Resposta: font_color: $_fontColor | font_border_color: $_fontBorderColor | size: $_fontSize';
+    final result = {
+      'font_color': _fontColor,
+      'font_border_color': _fontBorderColor,
+      'size': _fontSize,
+      'position_y': _positionY,
+      'max_lines': _maxLines,
+    };
     widget.onChanged(result);
   }
 
@@ -107,6 +139,8 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
   void dispose() {
     _fontColorController.dispose();
     _fontBorderController.dispose();
+    _positionYController.dispose();
+    _maxLinesController.dispose();
     super.dispose();
   }
 
@@ -132,9 +166,12 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
-                    Expanded(
+                    SizedBox(
+                      width: 160,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -184,8 +221,8 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                    SizedBox(
+                      width: 160,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -235,7 +272,6 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -258,6 +294,64 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                                   _fontSize = val;
                                 });
                                 _notifyChange();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Pos Y', style: TextStyle(fontSize: 12)),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: 80,
+                          child: TextFormField(
+                            controller: _positionYController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) {
+                              if (val.isNotEmpty) {
+                                final parsed = int.tryParse(val);
+                                if (parsed != null) {
+                                  setState(() {
+                                    _positionY = parsed;
+                                  });
+                                  _notifyChange();
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('max_lines', style: TextStyle(fontSize: 12)),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: 80,
+                          child: TextFormField(
+                            controller: _maxLinesController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) {
+                              if (val.isNotEmpty) {
+                                final parsed = int.tryParse(val);
+                                if (parsed != null) {
+                                  setState(() {
+                                    _maxLines = parsed;
+                                  });
+                                  _notifyChange();
+                                }
                               }
                             },
                           ),
