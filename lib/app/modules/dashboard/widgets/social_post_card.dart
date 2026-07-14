@@ -40,6 +40,8 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
   VideoPlayerController? _videoPlayerController;
   bool _isVideoInitialized = false;
   bool _showVideoPlayer = false;
+  
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -62,6 +64,14 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
       } else if (!widget.isInitiallyWaiting && _isWaitingForWebhook) {
         _stopWaiting();
       }
+    }
+    if (widget.content.hasError && _isWaitingForWebhook) {
+      _stopWaiting();
+      setState(() {
+        _errorMessage = widget.content.status.toLowerCase().contains('erro')
+            ? widget.content.status
+            : 'Ocorreu um erro durante a produção.';
+      });
     }
   }
 
@@ -103,6 +113,13 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
       final allCompleted = widget.content.productionSteps.every((step) => step.isCompleted);
       if (allCompleted || widget.content.hasError) {
         _stopWaiting();
+        if (widget.content.hasError && _errorMessage == null) {
+          setState(() {
+            _errorMessage = widget.content.status.toLowerCase().contains('erro')
+                ? widget.content.status
+                : 'Ocorreu um erro durante a produção.';
+          });
+        }
       }
     });
   }
@@ -504,6 +521,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
               onPressed: (_isLoading || _isWaitingForWebhook) ? null : () {
                 setState(() {
                   widget.content.hasError = false;
+                  _errorMessage = null;
                 });
                 _startWaiting();
                 
@@ -518,12 +536,14 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                   codigoEmpresa: widget.content.companyId,
                   codigoContrato: widget.content.templateId,
                   idRow: widget.content.id,
+                  dataAgendamento: widget.content.dataAgendamentoInstagram ?? widget.content.createdAt,
                 ).then((apiResponse) {
                   if (!apiResponse.success) {
                     if (mounted) {
                       _stopWaiting();
                       setState(() {
                         widget.content.hasError = true;
+                        _errorMessage = apiResponse.message ?? 'Erro ao enviar ação para o webhook.';
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -569,6 +589,15 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                       : const Text('Continuar Produção', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             ),
           ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: AppColors.terracotta, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
           const SizedBox(height: 8),
         ],
       ),

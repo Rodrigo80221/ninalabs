@@ -92,6 +92,60 @@ class _TemplatesPageState extends State<TemplatesPage> {
     }
   }
 
+  Future<void> _deleteTemplate(TemplateModel template) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Excluir Template'),
+          content: Text('Deseja mesmo excluir o template "${template.name}"?\n\nEsta ação é irreversível.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Excluir'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _baserowService.deleteTemplate(template.id);
+      
+      if (widget.account != null) {
+        widget.account!.templateIds.remove(template.id);
+      }
+
+      _dataChanged = true;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Template excluído com sucesso!'), backgroundColor: Colors.green),
+        );
+      }
+      await _loadTemplates();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -160,10 +214,49 @@ class _TemplatesPageState extends State<TemplatesPage> {
             child: Icon(Icons.file_copy, color: Colors.white),
           ),
           title: Text(template.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-          trailing: IconButton(
-            icon: const Icon(Icons.copy, color: AppColors.terracotta),
-            tooltip: 'Duplicar Template',
-            onPressed: () => _duplicateTemplate(template),
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: AppColors.terracotta),
+            onSelected: (value) {
+              if (value == 'duplicate') {
+                _duplicateTemplate(template);
+              } else if (value == 'delete') {
+                _deleteTemplate(template);
+              } else if (value == 'plan') {
+                // Planejamento de Conteúdo - não faz nada por enquanto
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'duplicate',
+                child: Row(
+                  children: [
+                    Icon(Icons.copy, color: AppColors.terracotta, size: 20),
+                    SizedBox(width: 8),
+                    Text('Duplicar'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'plan',
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month, color: AppColors.terracotta, size: 20),
+                    SizedBox(width: 8),
+                    Text('Planejamento de Conteúdo'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red, size: 20),
+                    SizedBox(width: 8),
+                    Text('Excluir', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
           onTap: () async {
             final result = await Navigator.push(

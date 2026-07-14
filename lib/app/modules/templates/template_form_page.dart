@@ -651,6 +651,48 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
     );
   }
 
+  Widget _buildDropdownWithDescriptions(String title, String key, List<Map<String, String>> options) {
+    final currentValue = _getString(key);
+    // If currentValue doesn't exist in options, default to null or add it as a fallback.
+    // This prevents errors when older templates load with older option strings.
+    final value = options.any((o) => o['title'] == currentValue) ? currentValue : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, fillColor: Colors.white, filled: true),
+            value: value,
+            selectedItemBuilder: (BuildContext context) {
+              return options.map<Widget>((o) {
+                return Text(o['title']!, style: const TextStyle(fontSize: 14));
+              }).toList();
+            },
+            items: options.map((o) => DropdownMenuItem(
+              value: o['title'],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(o['title']!, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(o['description']!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  const SizedBox(height: 4),
+                ],
+              ),
+            )).toList(),
+            onChanged: (val) => _updateForm(key, val),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRadio(String title, String key, List<String> options, {List<String> disabledOptions = const []}) {
     final currentValue = _getString(key);
     return Padding(
@@ -1009,12 +1051,65 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               _buildDropdown('Profundidade do Conteúdo', 'profundidadeConteudo', [
                 'Superficial', 'Intermediário', 'Profundo'
               ]),
-              _buildDropdown('Estrutura do Script', 'estruturaScript', [
-                'Gancho → Valor → Exemplo → CTA', 'Gancho → Problema → Solução → CTA', 'Gancho → História → Insight → CTA'
+              _buildDropdownWithDescriptions('Estrutura do Script', 'estruturaScript', [
+                {
+                  'title': 'Gancho → Erro Comum → Correção Prática → CTA',
+                  'description': 'Foca em apontar algo que o espectador faz de errado e entrega a solução imediata. É uma estrutura excelente para gerar "salvamentos" e compartilhamentos.'
+                },
+                {
+                  'title': 'Gancho → Mito → Verdade Chocante → CTA',
+                  'description': 'Quebra uma crença popular daquele nicho logo após o gancho e retém a atenção pela curiosidade de entender o porquê daquilo ser mentira.'
+                },
+                {
+                  'title': 'Gancho → Passo 1 → Passo 2 → Passo 3 → CTA',
+                  'description': 'Estrutura de lista rápida ou tutorial direto ao ponto. Gera alta retenção porque o cérebro humano tem a necessidade de concluir listas e ver o último passo.'
+                },
+                {
+                  'title': 'Gancho → Inimigo Comum → Sua Visão (Polarização) → CTA',
+                  'description': 'Cria senso de comunidade. Você ataca um conceito, padrão ou "vilão" que seu público também não gosta e apresenta a sua perspectiva.'
+                },
+                {
+                  'title': 'Gancho → Ação Visual (Bastidores) → Contexto Rápido → CTA',
+                  'description': 'Muito usado em vlogs ou conteúdos dinâmicos. Em vez de teoria (Valor/Problema), mostra a coisa acontecendo na prática e depois explica rapidamente o contexto.'
+                },
+                {
+                  'title': 'Gancho → Promessa → Prova (Mostrando Resultados) → CTA',
+                  'description': 'Vai direto ao ponto mostrando visualmente ou com dados que o que você falou no gancho é real. Ideal para prender céticos.'
+                },
               ]),
-              _buildDropdown('Estilo de Gancho', 'estiloGancho', [
-                'Curiosidade', 'Erro comum', 'Pergunta provocativa', 'Dica rápida', 'Alerta',
-                'Curiosidade local', 'Contradição', 'Estatística surpreendente'
+              _buildDropdownWithDescriptions('Estilo de Gancho', 'estiloGancho', [
+                {
+                  'title': 'Desafio ou Prova Social',
+                  'description': 'Baseado em provar algo para a audiência ou desafiá-la. Ex: "Eu testei a estratégia X por 30 dias e isso aconteceu" ou "Duvido você assistir esse vídeo sem sentir...".'
+                },
+                {
+                  'title': 'Antes e Depois (Transformação)',
+                  'description': 'Foca no resultado visual ou prático imediato para reter a atenção. Ex: "Como eu saí do zero absoluto para isso em apenas uma semana".'
+                },
+                {
+                  'title': 'Contação de Histórias (Storytelling Consistente)',
+                  'description': 'Inicia com uma narrativa pessoal ou de terceiros carregada de drama ou curiosidade. Ex: "A pior decisão que já tomei na minha carreira me custou..." ou "Tudo mudou quando eu descobri que...".'
+                },
+                {
+                  'title': 'Inimigo Comum / Identificação Proposital',
+                  'description': 'Cria conexão imediata ao atacar um problema ou figura que o público odeia. Ex: "Por que o algoritmo te odeia e como resolver isso" ou "Pare de cair no papo de quem diz que...".'
+                },
+                {
+                  'title': 'Lista / Contagem Regressiva',
+                  'description': 'O clássico formato de retenção baseado em passos estruturados. Ex: "3 ferramentas gratuitas que parecem ilegais de saber".'
+                },
+                {
+                  'title': 'FOMO (Medo de Ficar de Fora)',
+                  'description': 'Explora a urgência e o sentimento de exclusividade. Ex: "Se você ignorar isso hoje, vai se arrepender no próximo mês" ou "O segredo que os grandes criadores escondem de você".'
+                },
+                {
+                  'title': 'Quebra de Expectativa (Visual ou Textual)',
+                  'description': 'Começa mostrando algo completamente desconexo ou chocante que se explica nos segundos seguintes. Ex: "Isso não é um vídeo de culinária, mas vai mudar como você trabalha".'
+                },
+                {
+                  'title': 'Tutorial Direto ao Ponto (Como fazer)',
+                  'description': 'Focado puramente na utilidade prática sem enrolação. Ex: "Aprenda a fazer X em menos de 60 segundos".'
+                },
               ]),
               _buildDropdown('Chamada para Ação (CTA)', 'chamadaAcao', [
                 'Seguir o perfil', 'Curtir o post', 'Comentar', 'Compartilhar', 'Acessar link na bio',

@@ -97,6 +97,7 @@ class ContentModel {
   int? linkedScheduleId;
   bool hasError;
   final String? strategyText;
+  final DateTime? dataAgendamentoInstagram;
 
   ContentModel({
     required this.id,
@@ -115,6 +116,7 @@ class ContentModel {
     this.linkedScheduleId,
     this.hasError = false,
     this.strategyText,
+    this.dataAgendamentoInstagram,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
@@ -325,6 +327,15 @@ class ContentModel {
       linkedScheduleId: parsedLinkedScheduleId,
       hasError: hasErr,
       strategyText: json['EstrategistaDeConteudo'] ?? json['field_6993999'],
+      dataAgendamentoInstagram: (() {
+        final val = json['DataAgendamentoInstagram'] ?? json['Data Agendamento Instagram'] ?? json['field_9123342'];
+        if (val != null && val.toString().trim().isNotEmpty) {
+          try {
+            return DateTime.parse(val.toString().trim());
+          } catch (_) {}
+        }
+        return null;
+      })(),
     );
   }
 }

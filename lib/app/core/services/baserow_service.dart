@@ -310,6 +310,19 @@ class BaserowService {
     }
   }
 
+  Future<void> deleteTemplate(int id) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/$templatesTableId/$id/'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Falha ao excluir o template no Baserow: ${response.statusCode}');
+    }
+  }
+
   Future<List<TemplateModel>> fetchTemplates() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/$templatesTableId/?user_field_names=true'),

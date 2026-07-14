@@ -172,6 +172,9 @@ class DashboardController extends ChangeNotifier {
             _contents[index].hasError = true;
           }
           notifyListeners();
+        } else if (apenasGerarIdeia) {
+          setPolling(idRow, false);
+          loadData();
         }
       });
 
