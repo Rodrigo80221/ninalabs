@@ -252,6 +252,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
 
       if (!isVideo) {
         formDataToSave.remove('duracaoVideo');
+        formDataToSave.remove('duracaoVideoCustomizada');
         formDataToSave.remove('ritmoConteudo');
         formDataToSave.remove('criacaoBackgroundMusic');
         formDataToSave.remove('utilizaNarrador');
@@ -265,6 +266,9 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         formDataToSave.remove('configLegendaEN');
         formDataToSave.remove('idiomaNarracao');
       } else {
+        if (formDataToSave['duracaoVideo'] != 'Personalizado') {
+          formDataToSave.remove('duracaoVideoCustomizada');
+        }
         if (formDataToSave['utilizaNarrador'] != 'Sim') {
           formDataToSave.remove('motorVoz');
           formDataToSave.remove('vozNarradorGoogle');
@@ -829,7 +833,9 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               _buildRadio('Tipo de Conteúdo', 'tipoConteudo', ['Vídeo curto', 'Vídeo longo', 'Imagem única', 'Carrossel de imagens']),
               
               if (isVideo) ...[
-                _buildRadio('Duração do Vídeo', 'duracaoVideo', ['5–10 segundos', '10–20 segundos', '20–40 segundos', '40–60 segundos', 'Mais de 1 minuto']),
+                _buildRadio('Duração do Vídeo', 'duracaoVideo', ['5–10 segundos', '10–20 segundos', '20–40 segundos', '40–60 segundos', 'Mais de 1 minuto', 'Personalizado']),
+                if (_getString('duracaoVideo') == 'Personalizado')
+                  _buildTextField('Digite a Duração do Vídeo', 'duracaoVideoCustomizada'),
                 _buildRadio('Ritmo do Conteúdo', 'ritmoConteudo', [
                   'Muito rápido (conteúdo extremamente dinâmico)',
                   'Rápido (cortes frequentes e fala direta)',
@@ -1076,6 +1082,10 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   'title': 'Gancho → Promessa → Prova (Mostrando Resultados) → CTA',
                   'description': 'Vai direto ao ponto mostrando visualmente ou com dados que o que você falou no gancho é real. Ideal para prender céticos.'
                 },
+                {
+                  'title': 'Gancho → Cena Intriguante → Contexto Rápido → História e Detalhes → Virada → Pergunta → CTA',
+                  'description': 'Estrutura focada em storytelling com uma quebra de expectativa ou reviravolta (virada) no meio, ideal para prender a atenção com narrativa e gerar engajamento com uma pergunta final.'
+                },
               ]),
               _buildDropdownWithDescriptions('Estilo de Gancho', 'estiloGancho', [
                 {
@@ -1224,6 +1234,28 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                             child: const Text('Nova Versão'),
                           ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusPendingBg,
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(color: AppColors.terracotta.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, color: AppColors.terracotta, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Ao criar uma Nova Versão, a IA iniciará a geração do zero sem considerar o histórico de posts passados. Isso evita que ela repita padrões antigos ou ignore alterações recentes nas regras e identidade visual que você acabou de configurar.',
+                              style: TextStyle(fontSize: 12, color: AppColors.textDark, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 32),

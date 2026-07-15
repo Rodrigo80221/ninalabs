@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/components/status_badge.dart';
@@ -205,7 +206,26 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                               showDialog(
                                 context: context,
                                 builder: (ctx2) => AlertDialog(
-                                  title: const Text('Estratégia de Conteúdo'),
+                                  title: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Estratégia de Conteúdo'),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, color: AppColors.terracotta),
+                                        tooltip: 'Copiar Estratégia',
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: widget.content.strategyText ?? ''));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Estratégia copiada com sucesso!'),
+                                              backgroundColor: Colors.green,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                   content: SingleChildScrollView(
                                     child: Text(widget.content.strategyText!),
                                   ),
