@@ -66,7 +66,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
         idInstagramLinked: widget.account?.idInstagramLinked,
         usaMusicasDeFundoPreGravadas: template.usaMusicasDeFundoPreGravadas,
         identidade: template.identidade,
-        versao: template.versao,
+        versao: 1,
       );
 
       if (widget.account != null) {
