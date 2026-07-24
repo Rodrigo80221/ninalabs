@@ -3,6 +3,7 @@ import '../../core/services/baserow_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../dashboard/models/content_model.dart';
 import 'template_form_page.dart';
+import 'content_planning_page.dart';
 
 class TemplatesPage extends StatefulWidget {
   final AccountModel? account;
@@ -222,7 +223,12 @@ class _TemplatesPageState extends State<TemplatesPage> {
               } else if (value == 'delete') {
                 _deleteTemplate(template);
               } else if (value == 'plan') {
-                // Planejamento de Conteúdo - não faz nada por enquanto
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ContentPlanningPage(template: template),
+                  ),
+                ).then((_) => _loadTemplates());
               }
             },
             itemBuilder: (context) => [

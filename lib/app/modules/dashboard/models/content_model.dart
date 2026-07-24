@@ -44,6 +44,7 @@ class TemplateModel {
   final String? regras;
   final String? usaMusicasDeFundoPreGravadas;
   final String? identidade;
+  final String? planejamentoDeConteudo;
   final int versao;
 
   TemplateModel({
@@ -52,6 +53,7 @@ class TemplateModel {
     this.regras,
     this.usaMusicasDeFundoPreGravadas,
     this.identidade,
+    this.planejamentoDeConteudo,
     this.versao = 1,
   });
 
@@ -68,6 +70,7 @@ class TemplateModel {
       regras: json['Regras'] ?? json['field_9175683'],
       usaMusicasDeFundoPreGravadas: json['UsaMusicasDeFundoPreGravadas'] ?? json['field_8071084'],
       identidade: json['Identidade'] ?? json['field_9175684'],
+      planejamentoDeConteudo: json['PlanejamentoDeConteudo'] ?? json['field_9701223'],
       versao: v,
     );
   }

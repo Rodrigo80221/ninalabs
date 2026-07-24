@@ -8,6 +8,7 @@ import 'widgets/social_post_card.dart';
 import '../empresas/empresa_form_page.dart';
 import '../templates/templates_page.dart';
 import 'models/content_model.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -94,6 +95,10 @@ class _DashboardPageState extends State<DashboardPage> {
       builder: (context) {
         bool isLoading = false;
         bool apenasGerarIdeia = false;
+        final TextEditingController observationController = TextEditingController();
+        final stt.SpeechToText speechToText = stt.SpeechToText();
+        bool isListening = false;
+        String lastWords = "";
 
         return StatefulBuilder(
           builder: (context, setStateDialog) {
@@ -118,9 +123,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
             return AlertDialog(
               title: const Text('Criar Novo Conteúdo'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   CustomDropdown(
                     label: 'Empresa',
                     hint: 'Selecionar Empresa',
@@ -219,9 +226,65 @@ class _DashboardPageState extends State<DashboardPage> {
                       }
                     },
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: observationController,
+                          maxLines: 3,
+                          minLines: 1,
+                          decoration: const InputDecoration(
+                            labelText: 'Observação para IA (Opcional)',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isListening ? Colors.red.withOpacity(0.1) : AppColors.surface,
+                        ),
+                        child: IconButton(
+                          icon: Icon(isListening ? Icons.mic : Icons.mic_none, color: isListening ? Colors.red : AppColors.terracotta),
+                          onPressed: () async {
+                            if (!isListening) {
+                              bool available = await speechToText.initialize();
+                              if (available) {
+                                setStateDialog(() {
+                                  isListening = true;
+                                  lastWords = observationController.text;
+                                });
+                                speechToText.listen(
+                                  onResult: (result) {
+                                    setStateDialog(() {
+                                      final newText = lastWords.isEmpty ? result.recognizedWords : '$lastWords ${result.recognizedWords}';
+                                      observationController.text = newText;
+                                      if (result.finalResult) {
+                                        lastWords = newText;
+                                        isListening = false;
+                                      }
+                                    });
+                                  },
+                                  localeId: 'pt_BR',
+                                );
+                              }
+                            } else {
+                              setStateDialog(() => isListening = false);
+                              speechToText.stop();
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              actions: [
+            ),
+            actions: [
                 TextButton(
                   onPressed: isLoading ? null : () => Navigator.of(context).pop(),
                   child: const Text('Cancelar', style: TextStyle(color: AppColors.textLight)),
@@ -241,7 +304,13 @@ class _DashboardPageState extends State<DashboardPage> {
                       final company = _controller.accounts.firstWhere((a) => a.accountName == selectedEmpresa);
                       final template = _controller.allTemplates.firstWhere((t) => t.name == selectedTemplate);
 
-                      final apiResponse = await _controller.criarConteudo(company, template.id, selectedDate!, apenasGerarIdeia: apenasGerarIdeia);
+                      final apiResponse = await _controller.criarConteudo(
+                        company, 
+                        template.id, 
+                        selectedDate!, 
+                        apenasGerarIdeia: apenasGerarIdeia,
+                        observacaoDoUsuario: observationController.text,
+                      );
                       if (apiResponse.success && mounted) {
                         Navigator.of(context).pop();
                         _controller.setCompany(company.accountName);

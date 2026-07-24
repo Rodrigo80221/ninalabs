@@ -185,6 +185,7 @@ class BaserowService {
     required int companyId,
     required int templateId,
     int? idInstagramLinked,
+    String? observacaoDoUsuario,
   }) async {
     final now = DateTime.now().toUtc().toIso8601String();
     final scheduleDateString = scheduleDate.toUtc().toIso8601String();
@@ -198,6 +199,9 @@ class BaserowService {
 
     if (idInstagramLinked != null) {
       bodyData['idInstagram'] = [idInstagramLinked];
+    }
+    if (observacaoDoUsuario != null && observacaoDoUsuario.isNotEmpty) {
+      bodyData['ObservacaoDoUsuario'] = observacaoDoUsuario;
     }
 
     final response = await http.post(
@@ -280,6 +284,7 @@ class BaserowService {
     required String regras,
     String? usaMusicasDeFundoPreGravadas,
     String? identidade,
+    String? planejamentoDeConteudo,
     int? versao,
   }) async {
     final payload = <String, dynamic>{
@@ -291,6 +296,9 @@ class BaserowService {
       payload['Identidade'] = identidade;
     } else if (identidade != null && identidade.isEmpty) {
       payload['Identidade'] = null; // Clear if explicitly set to empty
+    }
+    if (planejamentoDeConteudo != null) {
+      payload['PlanejamentoDeConteudo'] = planejamentoDeConteudo;
     }
     if (versao != null) {
       payload['Versao'] = versao;

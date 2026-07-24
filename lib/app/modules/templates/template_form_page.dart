@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
@@ -158,9 +159,27 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                     if (kv[0] == 'size') map['size'] = int.tryParse(kv[1]) ?? (key == 'configLegendaPT' ? 12 : 16);
                     if (kv[0] == 'position_y') map['position_y'] = int.tryParse(kv[1]) ?? (key == 'configLegendaPT' ? 65 : 80);
                     if (kv[0] == 'max_lines') map['max_lines'] = int.tryParse(kv[1]) ?? 2;
+                    // Novos campos visuais
+                    if (kv[0] == 'font_family') map['font_family'] = kv[1];
+                    if (kv[0] == 'font_weight') map['font_weight'] = int.tryParse(kv[1]) ?? 600;
+                    if (kv[0] == 'border_width') map['border_width'] = int.tryParse(kv[1]) ?? 2;
+                    if (kv[0] == 'font_opacity') map['font_opacity'] = int.tryParse(kv[1]) ?? 100;
+                    if (kv[0] == 'shadow_enabled') map['shadow_enabled'] = kv[1] == 'true';
+                    if (kv[0] == 'shadow_opacity') map['shadow_opacity'] = int.tryParse(kv[1]) ?? 55;
+                    if (kv[0] == 'shadow_depth') map['shadow_depth'] = int.tryParse(kv[1]) ?? 4;
+                    if (kv[0] == 'highlight_color') map['highlight_color'] = kv[1];
                   }
                 }
                 map['max_lines'] ??= 2;
+                // Garante novos defaults caso venha de config legada
+                map['font_family'] ??= 'Poppins';
+                map['font_weight'] ??= 600;
+                map['border_width'] ??= 2;
+                map['font_opacity'] ??= 100;
+                map['shadow_enabled'] ??= true;
+                map['shadow_opacity'] ??= 55;
+                map['shadow_depth'] ??= 1;
+                map['highlight_color'] ??= '#FFD633';
                 _formData[key] = map;
               }
             }
@@ -170,6 +189,37 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           print('Erro ao carregar JSON das regras: $e');
         }
       }
+    } else {
+      _formData['configLegendaPT'] = {
+        'font_color': '#FFFFFF',
+        'font_border_color': '#000000',
+        'size': 12,
+        'position_y': 65,
+        'max_lines': 2,
+        'font_family': 'Poppins',
+        'font_weight': 600,
+        'border_width': 2,
+        'font_opacity': 100,
+        'shadow_enabled': true,
+        'shadow_opacity': 55,
+        'shadow_depth': 1,
+        'highlight_color': '#FFD633',
+      };
+      _formData['configLegendaEN'] = {
+        'font_color': '#F3E300',
+        'font_border_color': '#000000',
+        'size': 16,
+        'position_y': 80,
+        'max_lines': 2,
+        'font_family': 'Poppins',
+        'font_weight': 600,
+        'border_width': 2,
+        'font_opacity': 100,
+        'shadow_enabled': true,
+        'shadow_opacity': 55,
+        'shadow_depth': 1,
+        'highlight_color': '#FFD633',
+      };
     }
     
     await Future.wait([
@@ -220,6 +270,85 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
     } catch (e) {
       print('Erro ao carregar opções de música: $e');
     }
+  }
+
+  void _copyJson() {
+    final exportData = {
+      'nomeTemplate': _nameController.text,
+      'formData': _formData,
+      'identidade': _quillIdentidadeController.document.toPlainText().trim(),
+      'informacoesAdicionais': _quillInformacoesController.document.toPlainText().trim(),
+      'usaMusicasDeFundoPreGravadas': _selectedMusicOption,
+    };
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(exportData);
+    Clipboard.setData(ClipboardData(text: jsonStr));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('JSON copiado para a área de transferência!'), backgroundColor: Colors.green),
+    );
+  }
+
+  void _showImportDialog() {
+    final TextEditingController importController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Importar JSON'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: importController,
+            maxLines: 10,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Cole o JSON gerado pela IA aqui',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              try {
+                final Map<String, dynamic> imported = jsonDecode(importController.text);
+                setState(() {
+                  if (imported.containsKey('nomeTemplate')) {
+                    _nameController.text = imported['nomeTemplate'].toString();
+                  }
+                  if (imported.containsKey('usaMusicasDeFundoPreGravadas')) {
+                    _selectedMusicOption = imported['usaMusicasDeFundoPreGravadas']?.toString();
+                  }
+                  if (imported.containsKey('formData') && imported['formData'] is Map) {
+                    _formData = Map<String, dynamic>.from(imported['formData']);
+                  }
+                  if (imported.containsKey('identidade')) {
+                    final newText = imported['identidade'].toString();
+                    _quillIdentidadeController.replaceText(0, _quillIdentidadeController.document.length - 1, newText, const TextSelection.collapsed(offset: 0));
+                  }
+                  if (imported.containsKey('informacoesAdicionais')) {
+                    final newText = imported['informacoesAdicionais'].toString();
+                    _quillInformacoesController.replaceText(0, _quillInformacoesController.document.length - 1, newText, const TextSelection.collapsed(offset: 0));
+                  }
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('JSON importado com sucesso!'), backgroundColor: Colors.green),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Erro ao importar JSON: Verifique o formato.'), backgroundColor: Colors.red),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.terracotta),
+            child: const Text('Importar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1190,6 +1319,25 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _copyJson,
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: const Text('Copiar JSON'),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.terracotta),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _showImportDialog,
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Importar JSON'),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.terracotta),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(

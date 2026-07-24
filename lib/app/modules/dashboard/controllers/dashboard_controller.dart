@@ -147,13 +147,14 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  Future<ApiResponse> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate, {bool apenasGerarIdeia = false}) async {
+  Future<ApiResponse> criarConteudo(AccountModel company, int codigoContrato, DateTime scheduleDate, {bool apenasGerarIdeia = false, String? observacaoDoUsuario}) async {
     try {
       final idRow = await _baserowService.createPostRow(
         scheduleDate: scheduleDate,
         companyId: company.id,
         templateId: codigoContrato,
         idInstagramLinked: company.idInstagramLinked,
+        observacaoDoUsuario: observacaoDoUsuario,
       );
       // Dispara o webhook em background sem bloquear a UI
       WebhookService.criarNovoPost(

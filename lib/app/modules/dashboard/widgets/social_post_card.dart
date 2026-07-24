@@ -174,7 +174,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
               ],
             ),
           ),
-          if (widget.content.status == 'Pendente')
+          if (widget.content.status == 'Pendente' || widget.content.videoUrl != null || (widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty))
             IconButton(
               icon: const Icon(Icons.more_vert),
               onPressed: () {
@@ -237,6 +237,29 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                                   ],
                                 ),
                               );
+                            },
+                          ),
+                          const Divider(),
+                        ],
+                        if (widget.content.videoUrl != null) ...[
+                          ListTile(
+                            leading: const Icon(Icons.download, color: AppColors.textDark),
+                            title: const Text('Baixar Vídeo', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                            onTap: () async {
+                              Navigator.of(ctx).pop();
+                              final url = Uri.parse(widget.content.videoUrl!);
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } else {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Não foi possível abrir o link do vídeo.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             },
                           ),
                           const Divider(),
