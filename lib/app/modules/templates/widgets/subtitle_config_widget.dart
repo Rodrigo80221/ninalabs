@@ -29,11 +29,11 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
 
   // Novos campos visuais
   String _fontFamily = 'Poppins';
-  int _fontWeight = 600;
-  int _borderWidth = 2;
+  int _fontWeight = 700;
+  int _borderWidth = 1;
   int _fontOpacity = 100;
   bool _shadowEnabled = true;
-  int _shadowOpacity = 55;
+  int _shadowOpacity = 40;
   int _shadowDepth = 1;
   String _highlightColor = '#FFD633';
 
@@ -84,11 +84,11 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
             if (kv[0] == 'position_y') _positionY = int.tryParse(kv[1]) ?? widget.defaultPositionY;
             if (kv[0] == 'max_lines') _maxLines = int.tryParse(kv[1]) ?? 2;
             if (kv[0] == 'font_family') _fontFamily = kv[1];
-            if (kv[0] == 'font_weight') _fontWeight = int.tryParse(kv[1]) ?? 600;
-            if (kv[0] == 'border_width') _borderWidth = int.tryParse(kv[1]) ?? 2;
+            if (kv[0] == 'font_weight') _fontWeight = int.tryParse(kv[1]) ?? 700;
+            if (kv[0] == 'border_width') _borderWidth = int.tryParse(kv[1]) ?? 1;
             if (kv[0] == 'font_opacity') _fontOpacity = int.tryParse(kv[1]) ?? 100;
             if (kv[0] == 'shadow_enabled') _shadowEnabled = kv[1] == 'true';
-            if (kv[0] == 'shadow_opacity') _shadowOpacity = int.tryParse(kv[1]) ?? 55;
+            if (kv[0] == 'shadow_opacity') _shadowOpacity = int.tryParse(kv[1]) ?? 40;
             if (kv[0] == 'shadow_depth') _shadowDepth = int.tryParse(kv[1]) ?? 1;
             if (kv[0] == 'highlight_color') _highlightColor = kv[1];
           }
@@ -103,11 +103,11 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       _positionY = value['position_y'] ?? widget.defaultPositionY;
       _maxLines = value['max_lines'] ?? 2;
       _fontFamily = value['font_family'] ?? 'Poppins';
-      _fontWeight = value['font_weight'] ?? 600;
-      _borderWidth = value['border_width'] ?? 2;
+      _fontWeight = value['font_weight'] ?? 700;
+      _borderWidth = value['border_width'] ?? 1;
       _fontOpacity = value['font_opacity'] ?? 100;
       _shadowEnabled = value['shadow_enabled'] ?? true;
-      _shadowOpacity = value['shadow_opacity'] ?? 55;
+      _shadowOpacity = value['shadow_opacity'] ?? 40;
       _shadowDepth = value['shadow_depth'] ?? 1;
       _highlightColor = value['highlight_color'] ?? '#FFD633';
     }
