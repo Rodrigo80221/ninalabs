@@ -8,6 +8,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/webhook_service.dart';
 import '../models/content_model.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SocialPostCard extends StatefulWidget {
   final ContentModel content;
@@ -179,21 +180,13 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
       padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.quartzPink,
-            child: Text(
-              widget.content.companyName.isNotEmpty ? widget.content.companyName[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.content.templateName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textDark),
                 ),
                 if (widget.content.status != 'Pendente')
                   Padding(
@@ -349,22 +342,28 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
           children: [
             if (!_showVideoPlayer)
               Container(
-                color: Colors.black,
+                color: AppColors.background,
                 width: double.infinity,
                 height: double.infinity,
                 child: Image.network(
                   widget.content.imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: AppColors.quartzPink.withAlpha(76),
-                    child: const Column(
+                    color: AppColors.background,
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.image_not_supported_outlined, size: 32, color: AppColors.terracotta),
-                        SizedBox(height: 8),
+                        const Icon(Icons.satellite_alt_outlined, size: 36, color: AppColors.terracotta),
+                        const SizedBox(height: 12),
                         Text(
-                          'Ainda sem imagem gerada',
-                          style: TextStyle(color: AppColors.terracotta, fontWeight: FontWeight.bold, fontSize: 10),
+                          'SINAL NÃO ENCONTRADO',
+                          style: GoogleFonts.spaceGrotesk(color: AppColors.terracotta, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 2.0),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Ainda sem mídia gerada.',
+                          style: TextStyle(color: AppColors.textLight, fontSize: 10),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -525,23 +524,41 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
 
             final stepWidget = Row(
               children: [
-                Icon(
-                  isVisuallyCompleted ? Icons.check_circle : (isErrorStep ? Icons.radio_button_checked : (isNextStep ? Icons.radio_button_checked : Icons.radio_button_unchecked)),
-                  color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? Colors.green : Colors.grey)),
-                  size: 16,
+                Container(
+                  width: 12,
+                  height: 12,
+                  margin: const EdgeInsets.only(left: 2, right: 10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isErrorStep ? AppColors.errorText : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.successGreen : Colors.transparent)),
+                    border: Border.all(
+                      color: isErrorStep ? AppColors.errorText : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.successGreen : AppColors.border)),
+                      width: 2,
+                    ),
+                    boxShadow: isNextStep ? [BoxShadow(color: AppColors.terracotta.withOpacity(0.4), blurRadius: 8, spreadRadius: 2)] : null,
+                  ),
                 ),
-                const SizedBox(width: 6),
                 Expanded(
                   child: step.title == 'Estratégia' && widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty
                       ? InkWell(
                           onTap: () => _showStrategyDialog(context),
-                          child: Text(
-                            step.title,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.terracotta,
-                              decoration: TextDecoration.underline,
-                              fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  step.title,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.successGreen,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_outward, size: 12, color: AppColors.successGreen),
+                              ],
                             ),
                           ),
                         )
@@ -549,7 +566,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                           step.title,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.textDark : AppColors.textLight)),
+                            color: isErrorStep ? AppColors.errorText : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.successGreen : AppColors.textLight)),
                             fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
@@ -575,80 +592,91 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             );
           }),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (_isLoading || _isWaitingForWebhook) ? null : () {
-                setState(() {
-                  widget.content.hasError = false;
-                  _errorMessage = null;
-                });
-                _startWaiting();
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Ação enviada com sucesso!'),
-                    backgroundColor: Colors.green,
+          (_isLoading || _isWaitingForWebhook)
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.quartzPink,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                );
-
-                WebhookService.continuarProducao(
-                  codigoEmpresa: widget.content.companyId,
-                  codigoContrato: widget.content.templateId,
-                  idRow: widget.content.id,
-                  dataAgendamento: widget.content.dataAgendamentoInstagram ?? widget.content.createdAt,
-                ).then((apiResponse) {
-                  if (!apiResponse.success) {
-                    if (mounted) {
-                      _stopWaiting();
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      RotationTransition(
+                        turns: _animationController,
+                        child: const Icon(Icons.refresh, size: 16, color: Color(0xFFA9534C)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Aguardando... ${(_secondsElapsed ~/ 60).toString().padLeft(2, '0')}:${(_secondsElapsed % 60).toString().padLeft(2, '0')}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFA9534C)),
+                      ),
+                    ],
+                  ),
+                )
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
                       setState(() {
-                        widget.content.hasError = true;
-                        _errorMessage = apiResponse.message ?? 'Erro ao enviar ação para o webhook.';
+                        widget.content.hasError = false;
+                        _errorMessage = null;
                       });
+                      _startWaiting();
+                      
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(apiResponse.message ?? 'Erro ao enviar ação para o webhook.'),
-                          backgroundColor: AppColors.terracotta,
+                        const SnackBar(
+                          content: Text('Ação enviada com sucesso!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
-                    }
-                  }
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.terracotta,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,
-                disabledForegroundColor: Colors.black54,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+
+                      WebhookService.continuarProducao(
+                        codigoEmpresa: widget.content.companyId,
+                        codigoContrato: widget.content.templateId,
+                        idRow: widget.content.id,
+                        dataAgendamento: widget.content.dataAgendamentoInstagram ?? widget.content.createdAt,
+                      ).then((apiResponse) {
+                        if (mounted) {
+                          if (!apiResponse.success) {
+                            _stopWaiting();
+                            setState(() {
+                              widget.content.hasError = true;
+                              _errorMessage = apiResponse.message ?? 'Erro ao continuar produção.';
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(_errorMessage!),
+                                backgroundColor: AppColors.errorText,
+                              ),
+                            );
+                          }
+                        }
+                      }).catchError((error) {
+                        if (mounted) {
+                          _stopWaiting();
+                          setState(() {
+                            widget.content.hasError = true;
+                            _errorMessage = 'Erro de conexão: $error';
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Erro: $error'),
+                              backgroundColor: AppColors.errorText,
+                            ),
+                          );
+                        }
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.terracotta,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Continuar Produção', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
                 ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : _isWaitingForWebhook
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            RotationTransition(
-                              turns: _animationController,
-                              child: const Icon(Icons.refresh, size: 16),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Aguardando... ${(_secondsElapsed ~/ 60).toString().padLeft(2, '0')}:${(_secondsElapsed % 60).toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ],
-                        )
-                      : const Text('Continuar Produção', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            ),
-          ),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
@@ -675,8 +703,15 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
           margin: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border, width: 0.5),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              )
+            ],
           ),
           clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(

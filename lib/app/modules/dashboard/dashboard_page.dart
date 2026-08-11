@@ -9,6 +9,7 @@ import '../empresas/empresa_form_page.dart';
 import '../templates/templates_page.dart';
 import 'models/content_model.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:google_fonts/google_fonts.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -350,28 +351,42 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Nina Labs'),
+        backgroundColor: AppColors.headerBackground,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+        title: Text(
+          'Nina Labs',
+          style: GoogleFonts.playfairDisplay(
+            color: AppColors.textDark,
+            fontWeight: FontWeight.w700,
+            fontStyle: FontStyle.italic,
+            letterSpacing: 1.5,
+          ),
+        ),
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: AppColors.terracotta,
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: AppColors.headerBackground,
               ),
               child: Text(
                 'Nina Labs',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                style: GoogleFonts.playfairDisplay(
+                  color: AppColors.textDark,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: 1.5,
                 ),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.business, color: AppColors.textDark),
+              leading: const Icon(Icons.domain, color: AppColors.textDark),
               title: const Text('Empresa', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(context);
@@ -403,7 +418,7 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.file_copy, color: AppColors.textDark),
+              leading: const Icon(Icons.description_outlined, color: AppColors.textDark),
               title: const Text('Templates', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(context);
@@ -446,27 +461,34 @@ class _DashboardPageState extends State<DashboardPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePostDialog,
         backgroundColor: AppColors.terracotta,
-        shape: const CircleBorder(),
-        elevation: 4,
+        hoverColor: AppColors.terracottaHover,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(CupertinoIcons.add, color: Colors.white, size: 28),
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
-          ],
-        ),
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8.0,
-          color: AppColors.surface,
-          elevation: 0,
-          child: SizedBox(
-            height: 48,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Expanded(
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 4))
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BottomAppBar(
+              shape: const CircularNotchedRectangle(),
+              notchMargin: 8.0,
+              color: AppColors.surface,
+              elevation: 0,
+              child: SizedBox(
+                height: 56,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                     child: InkWell(
@@ -476,15 +498,15 @@ class _DashboardPageState extends State<DashboardPage> {
                         duration: const Duration(milliseconds: 250),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: _controller.currentTabIndex == 0 ? AppColors.terracotta.withOpacity(0.15) : Colors.transparent,
+                          color: _controller.currentTabIndex == 0 ? AppColors.quartzPink : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
                           child: Text(
                             'Em Produção  ${_controller.pendingContentsCount}',
                             style: TextStyle(
-                              fontWeight: _controller.currentTabIndex == 0 ? FontWeight.bold : FontWeight.normal,
-                              color: _controller.currentTabIndex == 0 ? AppColors.terracotta : AppColors.textLight,
+                              fontWeight: _controller.currentTabIndex == 0 ? FontWeight.w600 : FontWeight.normal,
+                              color: _controller.currentTabIndex == 0 ? AppColors.terracottaHover : AppColors.textLight,
                               fontSize: 14,
                             ),
                           ),
@@ -504,15 +526,15 @@ class _DashboardPageState extends State<DashboardPage> {
                         duration: const Duration(milliseconds: 250),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: _controller.currentTabIndex == 1 ? AppColors.terracotta.withOpacity(0.15) : Colors.transparent,
+                          color: _controller.currentTabIndex == 1 ? AppColors.quartzPink : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
                           child: Text(
                             'Finalizados  ${_controller.postedContentsCount}',
                             style: TextStyle(
-                              fontWeight: _controller.currentTabIndex == 1 ? FontWeight.bold : FontWeight.normal,
-                              color: _controller.currentTabIndex == 1 ? AppColors.terracotta : AppColors.textLight,
+                              fontWeight: _controller.currentTabIndex == 1 ? FontWeight.w600 : FontWeight.normal,
+                              color: _controller.currentTabIndex == 1 ? AppColors.terracottaHover : AppColors.textLight,
                               fontSize: 14,
                             ),
                           ),
@@ -526,8 +548,10 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildBodyContent() {
     if (_controller.isLoading) {
