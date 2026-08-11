@@ -315,7 +315,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         Navigator.of(context).pop();
                         _controller.setCompany(company.accountName);
                         _controller.setTemplate(template.name);
-                        _controller.setTabIndex(1); // Mudar para "Em Construção"
+                        _controller.setTabIndex(0); // Mudar para "Em Construção"
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Criação de conteúdo iniciada com sucesso!'), backgroundColor: Colors.green),
                         );
@@ -466,22 +466,60 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                IconButton(
-                  icon: Icon(
-                    CupertinoIcons.hand_thumbsup,
-                    color: _controller.currentTabIndex == 0 ? AppColors.terracotta : AppColors.textLight,
-                    size: 24,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: InkWell(
+                      onTap: () => _controller.setTabIndex(0),
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _controller.currentTabIndex == 0 ? AppColors.terracotta.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Em Produção  ${_controller.pendingContentsCount}',
+                            style: TextStyle(
+                              fontWeight: _controller.currentTabIndex == 0 ? FontWeight.bold : FontWeight.normal,
+                              color: _controller.currentTabIndex == 0 ? AppColors.terracotta : AppColors.textLight,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  onPressed: () => _controller.setTabIndex(0),
                 ),
-                const SizedBox(width: 48), // Espaço para o FAB
-                IconButton(
-                  icon: Icon(
-                    CupertinoIcons.wrench,
-                    color: _controller.currentTabIndex == 1 ? AppColors.terracotta : AppColors.textLight,
-                    size: 24,
+                const SizedBox(width: 60), // Espaço para o FAB
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: InkWell(
+                      onTap: () => _controller.setTabIndex(1),
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _controller.currentTabIndex == 1 ? AppColors.terracotta.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Finalizados  ${_controller.postedContentsCount}',
+                            style: TextStyle(
+                              fontWeight: _controller.currentTabIndex == 1 ? FontWeight.bold : FontWeight.normal,
+                              color: _controller.currentTabIndex == 1 ? AppColors.terracotta : AppColors.textLight,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  onPressed: () => _controller.setTabIndex(1),
                 ),
               ],
             ),
@@ -507,7 +545,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
     }
-    return _controller.currentTabIndex == 0 ? _buildFeedSection() : _buildPendingSection();
+    return _controller.currentTabIndex == 0 ? _buildPendingSection() : _buildFeedSection();
   }
 
   Widget _buildFilters() {

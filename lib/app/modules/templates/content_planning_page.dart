@@ -1,14 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../core/services/baserow_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../dashboard/models/content_model.dart';
 
+import 'package:http/http.dart' as http;
+import 'package:flutter_quill/flutter_quill.dart';
+
 class ContentPlanningPage extends StatefulWidget {
   final TemplateModel template;
+  final AccountModel? account;
 
-  const ContentPlanningPage({super.key, required this.template});
+  const ContentPlanningPage({
+    super.key,
+    required this.template,
+    this.account,
+  });
 
   @override
   State<ContentPlanningPage> createState() => _ContentPlanningPageState();
@@ -17,6 +26,12 @@ class ContentPlanningPage extends StatefulWidget {
 class _ContentPlanningPageState extends State<ContentPlanningPage> {
   final BaserowService _baserowService = BaserowService();
   bool _isLoading = false;
+  bool _isPlanningWithAI = false;
+  String? _iaComment;
+  
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool _isListening = false;
+  String _lastWords = '';
 
   DateTime? _startDate;
   String _selectedPeriod = '7';
@@ -25,6 +40,7 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
   
   List<DateTime> _generatedDates = [];
   Map<String, TextEditingController> _controllers = {};
+  final TextEditingController _aiNotesController = TextEditingController();
   
   List<String> _diasPublicacao = [];
   String? _horarioPublicacao;
@@ -170,6 +186,8 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
       final Map<String, dynamic> plan = {
         'startDate': _startDate?.toIso8601String(),
         'period': _selectedPeriod,
+        if (_aiNotesController.text.trim().isNotEmpty) 'observacoesParaIA': _aiNotesController.text.trim(),
+        if (_iaComment != null && _iaComment!.isNotEmpty) 'iaComment': _iaComment,
         'ideas': ideas,
       };
 
@@ -199,8 +217,158 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
     }
   }
 
+  Future<void> _createPlanningWithAI() async {
+    setState(() {
+      _isPlanningWithAI = true;
+      _iaComment = null;
+    });
+
+    try {
+      final Map<String, String> contentIdeas = {};
+      for (var date in _generatedDates) {
+        final key = date.toIso8601String().split('T').first;
+        final currentText = _controllers[key]?.text.trim() ?? '';
+        contentIdeas[key] = currentText.isEmpty ? 'Ideia para ${_formatDate(date)}' : currentText;
+      }
+
+      String getPlainText(String? text) {
+        if (text == null || text.isEmpty) return '';
+        try {
+          final doc = Document.fromJson(jsonDecode(text));
+          return doc.toPlainText().trim();
+        } catch (_) {
+          return text;
+        }
+      }
+
+      Map<String, dynamic> formData = {};
+      if (widget.template.regras != null && widget.template.regras!.isNotEmpty) {
+        try {
+          formData = jsonDecode(widget.template.regras!);
+        } catch (_) {}
+      }
+
+      final templateJson = {
+        'nomeTemplate': widget.template.name,
+        'formData': formData,
+        'identidade': getPlainText(widget.template.identidade),
+        'informacoesAdicionais': getPlainText(formData['informacoesAdicionais']?.toString()),
+        'usaMusicasDeFundoPreGravadas': widget.template.usaMusicasDeFundoPreGravadas,
+      };
+
+      final payload = {
+        'observations': _aiNotesController.text,
+        'contentIdeas': contentIdeas,
+        'templateJson': templateJson,
+        'entrepreneurInformation': getPlainText(widget.account?.informacoesDaEmpresa),
+      };
+
+      final response = await http.post(
+        Uri.parse('https://n8n.progridai.com.br/webhook/ninalabs/planejarconteudo'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      print('Status: ${response.statusCode}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (mounted) {
+          bool successParsing = false;
+          try {
+            print('--- AI RESPONSE START ---');
+            print('Raw body: ${response.body}');
+            final responseData = jsonDecode(response.body);
+            print('Decoded data type: ${responseData.runtimeType}');
+            
+            Map<String, dynamic>? itemMap;
+            
+            if (responseData is List && responseData.isNotEmpty) {
+              final first = responseData.first;
+              if (first is Map) {
+                itemMap = Map<String, dynamic>.from(first);
+              } else if (first is String) {
+                try { itemMap = jsonDecode(first); } catch (_) {}
+              }
+            } else if (responseData is Map) {
+              if (responseData.containsKey('data') && responseData['data'] is List && (responseData['data'] as List).isNotEmpty) {
+                 final inner = responseData['data'].first;
+                 if (inner is Map) itemMap = Map<String, dynamic>.from(inner);
+              } else {
+                 itemMap = Map<String, dynamic>.from(responseData);
+              }
+            } else if (responseData is String) {
+              try {
+                final innerDecode = jsonDecode(responseData);
+                if (innerDecode is List && innerDecode.isNotEmpty && innerDecode.first is Map) {
+                  itemMap = Map<String, dynamic>.from(innerDecode.first);
+                } else if (innerDecode is Map) {
+                  itemMap = Map<String, dynamic>.from(innerDecode);
+                }
+              } catch (_) {}
+            }
+
+            if (itemMap != null) {
+              print('Found itemMap keys: ${itemMap.keys.toList()}');
+              setState(() {
+                itemMap!.forEach((key, value) {
+                  if (key == 'IAComment') {
+                    _iaComment = value.toString();
+                    print('Set IAComment: $_iaComment');
+                  } else {
+                    if (_controllers.containsKey(key)) {
+                      _controllers[key]?.text = value.toString();
+                      print('Updated controller for $key');
+                    } else {
+                      print('Key $key not found in controllers. Available keys: ${_controllers.keys.toList()}');
+                    }
+                  }
+                });
+              });
+              successParsing = true;
+            } else {
+              print('Data could not be parsed into a Map.');
+            }
+          } catch (e, stack) {
+            print('Erro ao ler resposta da IA: $e\n$stack');
+          }
+          print('--- AI RESPONSE END ---');
+
+          if (successParsing) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Planejamento gerado pela IA com sucesso!'), backgroundColor: Colors.green),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Resposta recebida, mas não pôde ser lida. Verifique o console.'), backgroundColor: Colors.orange),
+            );
+          }
+        }
+      } else {
+        throw Exception('Falha ao enviar: HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao enviar para IA: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPlanningWithAI = false);
+      }
+    }
+  }
+
   void _copyJson() {
-    final Map<String, String> exportData = {};
+    final Map<String, dynamic> exportData = {};
+    
+    if (_aiNotesController.text.trim().isNotEmpty) {
+      exportData['ObservacoesParaIA'] = _aiNotesController.text.trim();
+    }
+    if (_iaComment != null && _iaComment!.isNotEmpty) {
+      exportData['IAComment'] = _iaComment;
+    }
+
     for (var date in _generatedDates) {
       final key = date.toIso8601String().split('T').first;
       final currentText = _controllers[key]?.text.trim() ?? '';
@@ -269,6 +437,7 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
 
   @override
   void dispose() {
+    _aiNotesController.dispose();
     for (var controller in _controllers.values) {
       controller.dispose();
     }
@@ -302,9 +471,13 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
           : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.terracotta))
-          : ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
+          : IgnorePointer(
+              ignoring: _isPlanningWithAI,
+              child: Opacity(
+                opacity: _isPlanningWithAI ? 0.6 : 1.0,
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
                 if (_diasPublicacao.isEmpty)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16.0),
@@ -366,13 +539,19 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
                           },
                           child: InputDecorator(
                             decoration: const InputDecoration(border: OutlineInputBorder(), fillColor: Colors.white, filled: true, isDense: true),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(_startDate != null ? _formatDate(_startDate!) : 'Selecione uma data'),
-                                const Icon(Icons.calendar_today, size: 20),
-                              ],
-                            ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _startDate != null ? _formatDate(_startDate!) : 'Selecione uma data',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.calendar_today, size: 20),
+                                ],
+                              ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -395,14 +574,127 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 2,
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      title: const Text('Planejar com IA', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.terracotta)),
+                      childrenPadding: const EdgeInsets.all(16.0),
+                      children: [
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Observações para a IA', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _aiNotesController,
+                          minLines: 4,
+                          maxLines: 15,
+                          decoration: InputDecoration(
+                            hintText: 'Ex.: criar conteúdos mais educativos, priorizar Reels, evitar temas repetidos...',
+                            border: const OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                            fillColor: Colors.white,
+                            filled: true,
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _isListening ? Colors.red.withOpacity(0.1) : AppColors.surface,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? Colors.red : AppColors.terracotta),
+                                  onPressed: () async {
+                                    if (!_isListening) {
+                                      bool available = await _speechToText.initialize();
+                                      if (available) {
+                                        setState(() {
+                                          _isListening = true;
+                                          _lastWords = _aiNotesController.text;
+                                        });
+                                        _speechToText.listen(
+                                          onResult: (result) {
+                                            setState(() {
+                                              final newText = _lastWords.isEmpty ? result.recognizedWords : '$_lastWords ${result.recognizedWords}';
+                                              _aiNotesController.text = newText;
+                                              if (result.finalResult) {
+                                                _lastWords = newText;
+                                                _isListening = false;
+                                              }
+                                            });
+                                          },
+                                          localeId: 'pt_BR',
+                                        );
+                                      }
+                                    } else {
+                                      setState(() => _isListening = false);
+                                      _speechToText.stop();
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: _isPlanningWithAI ? () {} : _createPlanningWithAI,
+                          icon: _isPlanningWithAI
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.auto_awesome, size: 18),
+                          label: Text(_isPlanningWithAI ? 'Planejando...' : 'Criar Planejamento', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.terracotta),
+                        ),
+                      ),
+                      if (_iaComment != null && _iaComment!.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 16.0),
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            border: Border.all(color: Colors.green.shade200),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.auto_awesome, color: Colors.green.shade700, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _iaComment!,
+                                  style: TextStyle(color: Colors.green.shade900),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
                 
                 if (_generatedDates.isNotEmpty)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Text('Ideias de Conteúdo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.terracotta)),
-                      Row(
+                      const Padding(
+                        padding: EdgeInsets.only(right: 16.0, bottom: 8.0),
+                        child: Text('Ideias de Conteúdo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.terracotta)),
+                      ),
+                      Wrap(
+                        spacing: 8.0,
                         children: [
                           TextButton.icon(
                             onPressed: _copyJson,
@@ -410,7 +702,6 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
                             label: const Text('Copiar JSON'),
                             style: TextButton.styleFrom(foregroundColor: AppColors.terracotta),
                           ),
-                          const SizedBox(width: 8),
                           TextButton.icon(
                             onPressed: _showImportDialog,
                             icon: const Icon(Icons.download, size: 18),
@@ -464,6 +755,8 @@ class _ContentPlanningPageState extends State<ContentPlanningPage> {
                 const SizedBox(height: 80),
               ],
             ),
+          ),
+        ),
     );
   }
 }

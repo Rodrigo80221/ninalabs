@@ -28,7 +28,7 @@ class DashboardController extends ChangeNotifier {
   }
 
   // Navigation State
-  int _currentTabIndex = 0; // 0 = Finalizados, 1 = Em Construção
+  int _currentTabIndex = 0; // 0 = Em Construção, 1 = Finalizados
   
   // Filter & Pagination State
   String? _selectedCompany;
@@ -74,6 +74,10 @@ class DashboardController extends ChangeNotifier {
     filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return filtered.take(_feedLimit).toList();
   }
+
+  int get pendingContentsCount => _applyFilters(_contents.where((c) => c.status == 'Pendente').toList()).length;
+  
+  int get postedContentsCount => _applyFilters(_contents.where((c) => c.status == 'Postado' || c.status == 'Agendado').toList()).length;
 
   bool get hasMoreFeed {
     final filtered = _applyFilters(_contents.where((c) => c.status == 'Postado' || c.status == 'Agendado').toList());

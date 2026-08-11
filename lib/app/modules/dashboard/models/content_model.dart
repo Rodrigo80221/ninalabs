@@ -33,7 +33,7 @@ class AccountModel {
       accountName: json['Name'] ?? json['field_7048152'] ?? 'Empresa Desconhecida',
       templateIds: tIds,
       idInstagramLinked: instaId,
-      informacoesDaEmpresa: json['InformacoesDaEmpresa'] as String?,
+      informacoesDaEmpresa: json['InformacoesDaEmpresa'] ?? json['field_9175681'] as String?,
     );
   }
 }

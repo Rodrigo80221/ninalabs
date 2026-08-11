@@ -137,6 +137,43 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     }
   }
 
+  void _showStrategyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx2) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Estratégia de Conteúdo'),
+            IconButton(
+              icon: const Icon(Icons.copy, color: AppColors.terracotta),
+              tooltip: 'Copiar Estratégia',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: widget.content.strategyText ?? ''));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Estratégia copiada com sucesso!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Text(widget.content.strategyText!),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx2).pop(),
+            child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -203,40 +240,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                             title: const Text('Ver Estratégia', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
                             onTap: () {
                               Navigator.of(ctx).pop();
-                              showDialog(
-                                context: context,
-                                builder: (ctx2) => AlertDialog(
-                                  title: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Estratégia de Conteúdo'),
-                                      IconButton(
-                                        icon: const Icon(Icons.copy, color: AppColors.terracotta),
-                                        tooltip: 'Copiar Estratégia',
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: widget.content.strategyText ?? ''));
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Estratégia copiada com sucesso!'),
-                                              backgroundColor: Colors.green,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  content: SingleChildScrollView(
-                                    child: Text(widget.content.strategyText!),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx2).pop(),
-                                      child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
-                                    ),
-                                  ],
-                                ),
-                              );
+                              _showStrategyDialog(context);
                             },
                           ),
                           const Divider(),
@@ -528,14 +532,27 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    step.title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.textDark : AppColors.textLight)),
-                      fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
+                  child: step.title == 'Estratégia' && widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty
+                      ? InkWell(
+                          onTap: () => _showStrategyDialog(context),
+                          child: Text(
+                            step.title,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.terracotta,
+                              decoration: TextDecoration.underline,
+                              fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          step.title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isErrorStep ? Colors.red.shade400 : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.textDark : AppColors.textLight)),
+                            fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
                 ),
               ],
             );

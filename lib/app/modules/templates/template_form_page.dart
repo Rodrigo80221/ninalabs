@@ -10,6 +10,7 @@ import '../dashboard/models/content_model.dart';
 import '../dashboard/models/google_voice_model.dart';
 import 'widgets/subtitle_config_widget.dart';
 import 'package:just_audio/just_audio.dart';
+import 'content_planning_page.dart';
 
 class TemplateFormPage extends StatefulWidget {
   final TemplateModel? template;
@@ -1322,6 +1323,33 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      if (widget.template != null) ...[
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ContentPlanningPage(
+                                  template: widget.template!,
+                                  account: widget.account,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.calendar_month, size: 18),
+                          label: const Text('Planejamento de Conteúdo'),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.terracotta),
+                        ),
+                        const SizedBox(width: 8),
+                      ] else ...[
+                        TextButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.calendar_month, size: 18),
+                          label: const Text('Planejamento de Conteúdo'),
+                          style: TextButton.styleFrom(foregroundColor: Colors.grey),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       TextButton.icon(
                         onPressed: _copyJson,
                         icon: const Icon(Icons.copy, size: 18),
