@@ -356,14 +356,10 @@ class _DashboardPageState extends State<DashboardPage> {
         backgroundColor: AppColors.headerBackground,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textDark),
-        title: Text(
-          'Nina Labs',
-          style: GoogleFonts.playfairDisplay(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w700,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 1.5,
-          ),
+        title: Image.asset(
+          'assets/logo.png',
+          height: 35, // Decreased the image height to fit nicely in the AppBar
+          fit: BoxFit.contain,
         ),
       ),
       drawer: Drawer(
@@ -374,14 +370,12 @@ class _DashboardPageState extends State<DashboardPage> {
               decoration: const BoxDecoration(
                 color: AppColors.headerBackground,
               ),
-              child: Text(
-                'Nina Labs',
-                style: GoogleFonts.playfairDisplay(
-                  color: AppColors.textDark,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  fontStyle: FontStyle.italic,
-                  letterSpacing: 1.5,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 50, // Decreased the image height for the drawer
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
