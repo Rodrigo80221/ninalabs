@@ -7,6 +7,8 @@ import 'controllers/dashboard_controller.dart';
 import 'widgets/social_post_card.dart';
 import '../empresas/empresa_form_page.dart';
 import '../templates/templates_page.dart';
+import '../templates/template_form_page.dart';
+import '../templates/content_planning_page.dart';
 import 'models/content_model.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_fonts/google_fonts.dart';
@@ -362,83 +364,7 @@ class _DashboardPageState extends State<DashboardPage> {
           fit: BoxFit.contain,
         ),
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                color: AppColors.headerBackground,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Image.asset(
-                  'assets/logo.png',
-                  height: 50, // Decreased the image height for the drawer
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.domain, color: AppColors.textDark),
-              title: const Text('Empresa', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
-              onTap: () async {
-                Navigator.pop(context);
-                final companyName = _controller.selectedCompany;
-                bool? result;
-                if (companyName != null) {
-                  try {
-                    final company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
-                    result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EmpresaFormPage(account: company)),
-                    );
-                  } catch (e) {
-                    result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
-                    );
-                  }
-                } else {
-                  result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const EmpresaFormPage()),
-                  );
-                }
-                
-                if (result == true) {
-                  _controller.loadData();
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.description_outlined, color: AppColors.textDark),
-              title: const Text('Templates', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600)),
-              onTap: () async {
-                Navigator.pop(context);
-                final companyName = _controller.selectedCompany;
-                AccountModel? company;
-                if (companyName != null) {
-                  try {
-                    company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
-                  } catch (_) {}
-                }
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TemplatesPage(account: company)),
-                );
-                
-                if (result != null) {
-                  await _controller.loadData();
-                  if (result is String) {
-                    _controller.setTemplate(result);
-                  }
-                }
-              },
-            ),
-          ],
-        ),
-      ),
+
       body: Column(
         children: [
           if (_controller.isLoading)
@@ -575,28 +501,224 @@ class _DashboardPageState extends State<DashboardPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Column(
         children: [
-          CustomDropdown(
-            label: 'Empresa',
-            hint: 'Selecionar Empresa',
-            value: _controller.selectedCompany,
-            items: accountNames,
-            onChanged: (value) {
-              if (value != null) {
-                _controller.setCompany(value);
-              }
-            },
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: CustomDropdown(
+                  label: 'Empresa',
+                  hint: 'Selecionar Empresa',
+                  value: _controller.selectedCompany,
+                  items: accountNames,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _controller.setCompany(value);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.domain, color: AppColors.terracotta),
+                  tooltip: 'Informações da Empresa',
+                  onPressed: _controller.selectedCompany == null ? null : () async {
+                    final companyName = _controller.selectedCompany;
+                    if (companyName != null) {
+                      try {
+                        final company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => EmpresaFormPage(account: company)),
+                        );
+                        if (result == true) {
+                          _controller.loadData();
+                        }
+                      } catch (_) {}
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          CustomDropdown(
-            label: 'Template de Conteúdo',
-            hint: 'Modelo',
-            value: _controller.selectedTemplate,
-            items: templateNames,
-            onChanged: (value) {
-              if (value != null) {
-                _controller.setTemplate(value);
-              }
-            },
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: CustomDropdown(
+                  label: 'Template de Conteúdo',
+                  hint: 'Modelo',
+                  value: _controller.selectedTemplate,
+                  items: templateNames,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _controller.setTemplate(value);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: AppColors.terracotta),
+                  tooltip: 'Opções do Template',
+                  onSelected: (value) async {
+                    final companyName = _controller.selectedCompany;
+                    AccountModel? company;
+                    if (companyName != null) {
+                      try {
+                        company = _controller.accounts.firstWhere((a) => a.accountName == companyName);
+                      } catch (_) {}
+                    }
+                    
+                    if (value == 'create') {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TemplateFormPage(account: company)),
+                      );
+                      if (result != null) {
+                        await _controller.loadData();
+                        if (result is String) {
+                          _controller.setTemplate(result);
+                        }
+                      }
+                      return;
+                    }
+                    
+                    TemplateModel? template;
+                    try {
+                      template = _controller.allTemplates.firstWhere((t) => t.name == _controller.selectedTemplate);
+                    } catch (_) {}
+
+                    if (template == null) return;
+
+                    if (value == 'edit') {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => TemplateFormPage(template: template, account: company)),
+                      );
+                      if (result != null) await _controller.loadData();
+                    } else if (value == 'duplicate') {
+                      await _controller.duplicateTemplate(template, company);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Template duplicado com sucesso!'), backgroundColor: Colors.green),
+                        );
+                      }
+                    } else if (value == 'plan') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContentPlanningPage(template: template!),
+                        ),
+                      ).then((_) => _controller.loadData());
+                    } else if (value == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Excluir Template'),
+                          content: Text('Deseja mesmo excluir o template "${template!.name}"?\n\nEsta ação é irreversível.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await _controller.deleteTemplate(template, company);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Template excluído com sucesso!'), backgroundColor: Colors.green),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (context) {
+                    final items = <PopupMenuEntry<String>>[
+                      const PopupMenuItem(
+                        value: 'create',
+                        child: Row(
+                          children: [
+                            Icon(Icons.add, color: AppColors.terracotta, size: 20),
+                            SizedBox(width: 8),
+                            Text('Criar Novo Template'),
+                          ],
+                        ),
+                      ),
+                    ];
+                    
+                    if (_controller.selectedTemplate != 'Todos') {
+                      items.add(const PopupMenuDivider());
+                      items.addAll([
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: AppColors.terracotta, size: 20),
+                              SizedBox(width: 8),
+                              Text('Alterar'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'plan',
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_month, color: AppColors.terracotta, size: 20),
+                              SizedBox(width: 8),
+                              Text('Planejamento de Conteúdo'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy, color: AppColors.terracotta, size: 20),
+                              SizedBox(width: 8),
+                              Text('Duplicar'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text('Excluir', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ]);
+                    }
+                    return items;
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -956,7 +956,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildCheckboxList('Plataforma de Publicação', 'plataformas', [
-                'Instagram', 'LinkedIn'
+                'Instagram', 'LinkedIn', 'TikTok', 'Youtube'
               ]),
               _buildRadio('Formato de Conteúdo', 'formatoConteudo', ['Série recorrente', 'Conteúdo isolado']),
               _buildRadio('Proporção da Mídia', 'proporcaoMedia', ['9:16 (Vertical)', '4:5 (Retrato)', '1:1 (Quadrado)', '16:9 (Horizontal)']),
@@ -1252,7 +1252,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 },
               ]),
               _buildDropdown('Chamada para Ação (CTA)', 'chamadaAcao', [
-                'Seguir o perfil', 'Curtir o post', 'Comentar', 'Compartilhar', 'Acessar link na bio',
+                'Seguir o perfil', 'Curtir o post', 'Comentar', 'Compartilhar', 'Salvar o Post', 'Acessar link na bio',
                 'Entrar em contato no WhatsApp', 'Comprar produto'
               ]),
               _buildDropdown('Nível de criatividade permitido para a IA', 'nivelCriatividade', [

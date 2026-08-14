@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SubtitleConfigWidget extends StatefulWidget {
   final String title;
@@ -137,6 +138,32 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       'highlight_color': _highlightColor,
     };
     widget.onChanged(result);
+  }
+
+  void _restoreDefaults() {
+    final isEN = widget.title.contains('EN');
+    setState(() {
+      _fontColor = isEN ? '#F3E300' : '#FFFFFF';
+      _fontBorderColor = '#000000';
+      _fontSize = isEN ? 16 : 12;
+      _positionY = isEN ? 80 : 65;
+      _maxLines = 2;
+      _fontFamily = 'Poppins';
+      _fontWeight = 600;
+      _borderWidth = 2;
+      _fontOpacity = 100;
+      _shadowEnabled = true;
+      _shadowOpacity = 55;
+      _shadowDepth = 1;
+      _highlightColor = '#FFD633';
+      
+      _fontColorController.text = _fontColor;
+      _fontBorderController.text = _fontBorderColor;
+      _positionYController.text = _positionY.toString();
+      _maxLinesController.text = _maxLines.toString();
+      _highlightColorController.text = _highlightColor;
+    });
+    _notifyChange();
   }
 
   Color _hexToColor(String hex) {
@@ -322,7 +349,23 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              TextButton.icon(
+                onPressed: _restoreDefaults,
+                icon: const Icon(Icons.restore, size: 16),
+                label: const Text('Restaurar Padrões'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(16),
@@ -590,13 +633,16 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                               TextSpan(text: 'highlight'),
                             ],
                           ),
-                          style: TextStyle(
-                            fontSize: _fontSize.toDouble(),
-                            fontWeight: _toFontWeight(_fontWeight),
-                            foreground: Paint()
-                              ..style = PaintingStyle.stroke
-                              ..strokeWidth = _borderWidth.toDouble()
-                              ..color = previewBorderColor,
+                          style: GoogleFonts.getFont(
+                            _fontFamily,
+                            textStyle: TextStyle(
+                              fontSize: _fontSize.toDouble(),
+                              fontWeight: _toFontWeight(_fontWeight),
+                              foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = _borderWidth.toDouble()
+                                ..color = previewBorderColor,
+                            ),
                           ),
                         ),
                         // Fill
@@ -617,17 +663,20 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                               ),
                             ],
                           ),
-                          style: TextStyle(
-                            fontSize: _fontSize.toDouble(),
-                            fontWeight: _toFontWeight(_fontWeight),
-                            shadows: _shadowEnabled
-                                ? [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(_shadowOpacity / 100.0),
-                                      offset: Offset(_shadowDepth.toDouble() * 0.5, _shadowDepth.toDouble() * 0.5),
-                                    )
-                                  ]
-                                : null,
+                          style: GoogleFonts.getFont(
+                            _fontFamily,
+                            textStyle: TextStyle(
+                              fontSize: _fontSize.toDouble(),
+                              fontWeight: _toFontWeight(_fontWeight),
+                              shadows: _shadowEnabled
+                                  ? [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(_shadowOpacity / 100.0),
+                                        offset: Offset(_shadowDepth.toDouble() * 0.5, _shadowDepth.toDouble() * 0.5),
+                                      )
+                                    ]
+                                  : null,
+                            ),
                           ),
                         ),
                       ],

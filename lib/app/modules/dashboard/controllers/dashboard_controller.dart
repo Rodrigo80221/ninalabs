@@ -238,4 +238,53 @@ class DashboardController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('selectedTemplate', template);
   }
+
+  Future<bool> duplicateTemplate(TemplateModel template, AccountModel? account) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      final newName = '${template.name} (Cópia)';
+      final newId = await _baserowService.createTemplate(
+        name: newName,
+        regras: template.regras ?? '{}',
+        accountId: account?.id,
+        idInstagramLinked: account?.idInstagramLinked,
+        usaMusicasDeFundoPreGravadas: template.usaMusicasDeFundoPreGravadas,
+        identidade: template.identidade,
+        versao: 1,
+      );
+
+      if (account != null) {
+        account.templateIds.add(newId);
+      }
+      await loadData();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteTemplate(TemplateModel template, AccountModel? account) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      await _baserowService.deleteTemplate(template.id);
+      if (account != null) {
+        account.templateIds.remove(template.id);
+      }
+      if (_selectedTemplate == template.name) {
+        _selectedTemplate = 'Todos';
+      }
+      await loadData();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

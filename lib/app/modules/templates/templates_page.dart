@@ -215,55 +215,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
             child: Icon(Icons.file_copy, color: Colors.white),
           ),
           title: Text(template.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-          trailing: PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppColors.terracotta),
-            onSelected: (value) {
-              if (value == 'duplicate') {
-                _duplicateTemplate(template);
-              } else if (value == 'delete') {
-                _deleteTemplate(template);
-              } else if (value == 'plan') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ContentPlanningPage(template: template),
-                  ),
-                ).then((_) => _loadTemplates());
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'duplicate',
-                child: Row(
-                  children: [
-                    Icon(Icons.copy, color: AppColors.terracotta, size: 20),
-                    SizedBox(width: 8),
-                    Text('Duplicar'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'plan',
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_month, color: AppColors.terracotta, size: 20),
-                    SizedBox(width: 8),
-                    Text('Planejamento de Conteúdo'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red, size: 20),
-                    SizedBox(width: 8),
-                    Text('Excluir', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+
           onTap: () async {
             final result = await Navigator.push(
               context,
