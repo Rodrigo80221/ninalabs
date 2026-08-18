@@ -420,4 +420,77 @@ class BaserowService {
       throw Exception('Falha ao carregar os agendamentos do Baserow: ${response.statusCode} - Body: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> uploadUserFile(List<int> fileBytes, String filename) async {
+    final uri = Uri.parse('https://api.baserow.io/api/user-files/upload-file/');
+    var request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Token $_token';
+    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: filename));
+
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final resBody = await response.stream.bytesToString();
+      return jsonDecode(resBody);
+    } else {
+      final resBody = await response.stream.bytesToString();
+      throw Exception('Failed to upload file to Baserow: ${response.statusCode} $resBody');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPlaylists() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/$musicOptionsTableId/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final List results = decoded['results'] ?? [];
+      return results.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Falha ao carregar BancoDeMusicasProntas do Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<void> addPlaylistSong({
+    required String playlistName,
+    required String notes,
+    required Map<String, dynamic> uploadedFileData,
+  }) async {
+    final payload = {
+      'Name': playlistName,
+      'Notes': notes,
+      'Musica': [
+        uploadedFileData
+      ]
+    };
+    
+    final response = await http.post(
+      Uri.parse('$_baseUrl/$musicOptionsTableId/?user_field_names=true'),
+      headers: {
+        'Authorization': 'Token $_token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Falha ao criar música no Baserow: ${response.statusCode}');
+    }
+  }
+
+  Future<void> deletePlaylistSong(int id) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/$musicOptionsTableId/$id/'),
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Falha ao excluir música no Baserow: ${response.statusCode} - Body: ${response.body}');
+    }
+  }
 }

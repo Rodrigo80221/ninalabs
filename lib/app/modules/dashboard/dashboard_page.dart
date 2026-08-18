@@ -12,6 +12,7 @@ import '../templates/content_planning_page.dart';
 import 'models/content_model.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_fonts/google_fonts.dart';
+import '../playlists/playlists_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -363,6 +364,19 @@ class _DashboardPageState extends State<DashboardPage> {
           height: 35, // Decreased the image height to fit nicely in the AppBar
           fit: BoxFit.contain,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(CupertinoIcons.music_note_list, color: AppColors.terracotta),
+            tooltip: 'Banco de Músicas Prontas',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PlaylistsPage()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
 
       body: Column(

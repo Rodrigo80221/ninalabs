@@ -175,6 +175,43 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     );
   }
 
+  void _showDescriptionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx2) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Descrição', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+            IconButton(
+              icon: const Icon(Icons.copy, color: AppColors.terracotta),
+              tooltip: 'Copiar Descrição',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: widget.content.description));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Descrição copiada com sucesso!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Text(widget.content.description),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx2).pop(),
+            child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -539,37 +576,44 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                   ),
                 ),
                 Expanded(
-                  child: step.title == 'Estratégia' && widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty
-                      ? InkWell(
-                          onTap: () => _showStrategyDialog(context),
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  step.title,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.successGreen,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                  child: () {
+                    final isEstrategiaClickable = step.title == 'Estratégia' && widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty;
+                    final isDescricaoClickable = step.title == 'Descrição' && widget.content.description.trim().isNotEmpty;
+                    
+                    if (isEstrategiaClickable || isDescricaoClickable) {
+                      return InkWell(
+                        onTap: () => isEstrategiaClickable ? _showStrategyDialog(context) : _showDescriptionDialog(context),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                step.title,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.successGreen,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.arrow_outward, size: 12, color: AppColors.successGreen),
-                              ],
-                            ),
-                          ),
-                        )
-                      : Text(
-                          step.title,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isErrorStep ? AppColors.errorText : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.successGreen : AppColors.textLight)),
-                            fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_outward, size: 12, color: AppColors.successGreen),
+                            ],
                           ),
                         ),
+                      );
+                    } else {
+                      return Text(
+                        step.title,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isErrorStep ? AppColors.errorText : (isNextStep ? AppColors.terracotta : (isVisuallyCompleted ? AppColors.successGreen : AppColors.textLight)),
+                          fontWeight: (isNextStep || isErrorStep) ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      );
+                    }
+                  }(),
                 ),
               ],
             );

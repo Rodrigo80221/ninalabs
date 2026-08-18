@@ -11,6 +11,8 @@ import '../dashboard/models/google_voice_model.dart';
 import 'widgets/subtitle_config_widget.dart';
 import 'package:just_audio/just_audio.dart';
 import 'content_planning_page.dart';
+import 'package:flutter/cupertino.dart';
+import '../playlists/playlists_page.dart';
 
 class TemplateFormPage extends StatefulWidget {
   final TemplateModel? template;
@@ -450,14 +452,23 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
       final identidadeValue = formDataToSave.remove('identidade');
       formDataToSave.remove('modoGeracaoImagens');
 
-      final regrasJson = const JsonEncoder.withIndent('  ').convert(formDataToSave);
-
       final isCriacaoBgMusic = _getString('criacaoBackgroundMusic') == 'Sim';
       String? finalMusicOption = _selectedMusicOption;
 
-      if (!isVideo || isCriacaoBgMusic || finalMusicOption == 'Nenhuma') {
+      if (!isVideo || !isCriacaoBgMusic || finalMusicOption == 'Nenhuma') {
         finalMusicOption = null;
       }
+
+      if (finalMusicOption != null) {
+        formDataToSave['usaMusicasDeFundoPreGravadas'] = finalMusicOption;
+      } else {
+        formDataToSave.remove('usaMusicasDeFundoPreGravadas');
+      }
+
+      final regrasJson = const JsonEncoder.withIndent('  ').convert(formDataToSave);
+
+
+
 
       if (widget.template == null) {
         final newId = await _baserowService.createTemplate(
@@ -1060,7 +1071,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
             children: [
               _buildYesNo('Criação de background music?', 'criacaoBackgroundMusic'),
               
-              if (_getString('criacaoBackgroundMusic') == 'Não')
+              if (_getString('criacaoBackgroundMusic') == 'Sim')
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: Column(
@@ -1068,26 +1079,45 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                     children: [
                       const Text('Usa Músicas de Fundo Pré Gravadas?', style: TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedMusicOption,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          fillColor: Colors.white,
-                          filled: true,
-                          isDense: true,
-                        ),
-                        hint: const Text('Selecione uma opção'),
-                        items: _musicOptions.map((String option) {
-                          return DropdownMenuItem<String>(
-                            value: option,
-                            child: Text(option),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedMusicOption = newValue;
-                          });
-                        },
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedMusicOption,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                fillColor: Colors.white,
+                                filled: true,
+                                isDense: true,
+                              ),
+                              hint: const Text('Selecione uma opção'),
+                              items: _musicOptions.map((String option) {
+                                return DropdownMenuItem<String>(
+                                  value: option,
+                                  child: Text(option),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  _selectedMusicOption = newValue;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(CupertinoIcons.music_note_list, color: AppColors.terracotta),
+                            tooltip: 'Gerenciar Banco de Músicas',
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PlaylistsPage()),
+                              );
+                              // Refresh combo when coming back
+                              await _loadMusicOptions();
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
