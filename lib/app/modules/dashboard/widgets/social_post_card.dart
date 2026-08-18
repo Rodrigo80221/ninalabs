@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:html' as html;
 import 'dart:math' as math;
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -281,14 +283,47 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                             title: const Text('Baixar Vídeo', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
                             onTap: () async {
                               Navigator.of(ctx).pop();
-                              final url = Uri.parse(widget.content.videoUrl!);
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url, mode: LaunchMode.externalApplication);
-                              } else {
+                              
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Iniciando download...'),
+                                    backgroundColor: AppColors.terracotta,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+
+                              try {
+                                final dateStr = widget.content.date.replaceAll('/', '-').replaceAll(':', '').replaceAll(' ', '_');
+                                final templateName = widget.content.templateName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+                                final filename = '${templateName}_$dateStr.mp4';
+
+                                final response = await http.get(Uri.parse(widget.content.videoUrl!));
+                                final blob = html.Blob([response.bodyBytes]);
+                                final objectUrl = html.Url.createObjectUrlFromBlob(blob);
+                                final anchor = html.AnchorElement(href: objectUrl)
+                                  ..setAttribute("download", filename)
+                                  ..click();
+                                html.Url.revokeObjectUrl(objectUrl);
+                                
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Não foi possível abrir o link do vídeo.'),
+                                      content: Text('Download concluído!'),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                final url = Uri.parse(widget.content.videoUrl!);
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                } else if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Erro ao baixar vídeo: $e'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
