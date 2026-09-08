@@ -37,6 +37,7 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
   int _shadowOpacity = 40;
   int _shadowDepth = 1;
   String _highlightColor = '#FFD633';
+  bool _wordTimestamps = false;
 
   late TextEditingController _fontColorController;
   late TextEditingController _fontBorderController;
@@ -92,6 +93,7 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
             if (kv[0] == 'shadow_opacity') _shadowOpacity = int.tryParse(kv[1]) ?? 40;
             if (kv[0] == 'shadow_depth') _shadowDepth = int.tryParse(kv[1]) ?? 1;
             if (kv[0] == 'highlight_color') _highlightColor = kv[1];
+            if (kv[0] == 'word_timestamps') _wordTimestamps = kv[1] == 'true';
           }
         }
       } catch (e) {
@@ -111,6 +113,7 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       _shadowOpacity = value['shadow_opacity'] ?? 40;
       _shadowDepth = value['shadow_depth'] ?? 1;
       _highlightColor = value['highlight_color'] ?? '#FFD633';
+      _wordTimestamps = value['word_timestamps'] ?? false;
     }
     // Garante que os valores estao dentro do range valido
     _fontOpacity = _fontOpacity.clamp(0, 100);
@@ -136,6 +139,7 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       'shadow_opacity': _shadowOpacity,
       'shadow_depth': _shadowDepth,
       'highlight_color': _highlightColor,
+      'word_timestamps': _wordTimestamps,
     };
     widget.onChanged(result);
   }
@@ -156,6 +160,7 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
       _shadowOpacity = 55;
       _shadowDepth = 1;
       _highlightColor = '#FFD633';
+      _wordTimestamps = false;
       
       _fontColorController.text = _fontColor;
       _fontBorderController.text = _fontBorderColor;
@@ -604,6 +609,24 @@ class _SubtitleConfigWidgetState extends State<SubtitleConfigWidget> {
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+
+                // ── EFEITO KARAOKÊ ──────────────────────────────────────────────
+                _sectionLabel('EFEITO KARAOKÊ'),
+                Row(
+                  children: [
+                    Switch(
+                      value: _wordTimestamps,
+                      onChanged: (val) {
+                        setState(() => _wordTimestamps = val);
+                        _notifyChange();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _label('Destacar palavra sendo lida (Efeito tipo Karaokê)'),
                     ),
                   ],
                 ),

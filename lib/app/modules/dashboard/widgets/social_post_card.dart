@@ -214,6 +214,114 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     );
   }
 
+  void _showVideoMakerDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx2) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Especificações VideoMaker', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16)),
+            IconButton(
+              icon: const Icon(Icons.copy, color: AppColors.terracotta),
+              tooltip: 'Copiar',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: widget.content.videoMakerText ?? ''));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copiado com sucesso!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E), // Fundo escuro para código
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SelectableText(
+                widget.content.videoMakerText ?? '',
+                style: GoogleFonts.firaCode(
+                  color: const Color(0xFFD4D4D4),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx2).pop(),
+            child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDiretorConteudoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx2) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Direção de Conteúdo', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold, fontSize: 16)),
+            IconButton(
+              icon: const Icon(Icons.copy, color: AppColors.terracotta),
+              tooltip: 'Copiar',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: widget.content.diretorConteudoText ?? ''));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copiado com sucesso!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E), // Fundo escuro para código
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SelectableText(
+                widget.content.diretorConteudoText ?? '',
+                style: GoogleFonts.firaCode(
+                  color: const Color(0xFFD4D4D4),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx2).pop(),
+            child: const Text('Fechar', style: TextStyle(color: AppColors.terracotta)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -243,7 +351,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
               ],
             ),
           ),
-          if (widget.content.status == 'Pendente' || widget.content.videoUrl != null || (widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty))
+          if (widget.content.status == 'Pendente' || widget.content.videoUrl != null || (widget.content.strategyText != null && widget.content.strategyText!.trim().isNotEmpty) || (widget.content.videoMakerText != null && widget.content.videoMakerText!.trim().isNotEmpty) || (widget.content.diretorConteudoText != null && widget.content.diretorConteudoText!.trim().isNotEmpty))
             IconButton(
               icon: const Icon(Icons.more_vert),
               onPressed: () {
@@ -273,6 +381,28 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
                             onTap: () {
                               Navigator.of(ctx).pop();
                               _showStrategyDialog(context);
+                            },
+                          ),
+                          const Divider(),
+                        ],
+                        if (widget.content.videoMakerText != null && widget.content.videoMakerText!.trim().isNotEmpty) ...[
+                          ListTile(
+                            leading: const Icon(Icons.code, color: AppColors.textDark),
+                            title: const Text('Ver Especificações VideoMaker', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              _showVideoMakerDialog(context);
+                            },
+                          ),
+                          const Divider(),
+                        ],
+                        if (widget.content.diretorConteudoText != null && widget.content.diretorConteudoText!.trim().isNotEmpty) ...[
+                          ListTile(
+                            leading: const Icon(Icons.movie_creation_outlined, color: AppColors.textDark),
+                            title: const Text('Ver Direção de Conteúdo', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              _showDiretorConteudoDialog(context);
                             },
                           ),
                           const Divider(),
@@ -777,7 +907,7 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
     
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: isPendingOrError ? 900 : 500),
+        constraints: const BoxConstraints(maxWidth: 500),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
           decoration: BoxDecoration(
@@ -793,44 +923,14 @@ class _SocialPostCardState extends State<SocialPostCard> with SingleTickerProvid
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 600;
-
-              if (isDesktop && isPendingOrError) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(context),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildCaption(context),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: _buildImage(context),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: _buildTimeline(context),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(context),
-                  _buildCaption(context),
-                  _buildImage(context),
-                  if (isPendingOrError) _buildTimeline(context),
-                ],
-              );
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              _buildCaption(context),
+              _buildImage(context),
+              if (isPendingOrError) _buildTimeline(context),
+            ],
           ),
         ),
       ),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'schedule_model.dart';
 
 class AccountModel {
@@ -101,6 +102,8 @@ class ContentModel {
   bool hasError;
   final String? strategyText;
   final DateTime? dataAgendamentoInstagram;
+  final String? videoMakerText;
+  final String? diretorConteudoText;
 
   ContentModel({
     required this.id,
@@ -120,6 +123,8 @@ class ContentModel {
     this.hasError = false,
     this.strategyText,
     this.dataAgendamentoInstagram,
+    this.videoMakerText,
+    this.diretorConteudoText,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json, List<AccountModel> accounts, List<ScheduleModel> schedules) {
@@ -249,59 +254,8 @@ class ContentModel {
 
     final steps = [
       ContentProductionStep(
-        title: 'Secretaria',
-        isCompleted: isFilled('7403505') || isFilled('SecretariaJoyce'),
-      ),
-      ContentProductionStep(
         title: 'Estratégia',
         isCompleted: isFilled('6993999') || isFilled('EstrategistaDeConteudo'),
-      ),
-      ContentProductionStep(
-        title: 'Planejamento',
-        isCompleted: isFilled('6963717') || isFilled('Gestor'),
-      ),
-      ContentProductionStep(
-        title: 'Conteúdo',
-        isCompleted: isFilled('6963716') || isFilled('DiretorConteudo'),
-      ),
-      ContentProductionStep(
-        title: 'HTML das imagens',
-        isCompleted: isFilled('7441568') || isFilled('html2image'),
-      ),
-      ContentProductionStep(
-        title: 'Imagem abertura',
-        isCompleted: isFilled('6964823') || isFilled('ImagemDeAbertura'),
-      ),
-      ContentProductionStep(
-        title: 'Imagens restantes',
-        isCompleted: isFilled('6966274') || isFilled('ImagensRestantes'),
-      ),
-      ContentProductionStep(
-        title: 'Narração',
-        isCompleted: (isFilled('6975911') || isFilled('Narracao')) &&
-                     (isFilled('6975912') || isFilled('AudioNarracao')),
-      ),
-      ContentProductionStep(
-        title: 'Legenda',
-        isCompleted: (isFilled('7004890') || isFilled('ArquivoLegenda')) ||
-                     (isFilled('7133863') || isFilled('ArquivoLegendaOriginal')),
-      ),
-      ContentProductionStep(
-        title: 'Vídeo base',
-        isCompleted: (isFilled('6969404') || isFilled('VideoMaker')) &&
-                     (isFilled('6970011') || isFilled('VideoEditado')),
-      ),
-      ContentProductionStep(
-        title: 'Música de fundo',
-        isCompleted: isFilled('6975660') || isFilled('BackgroundMusic'),
-      ),
-      ContentProductionStep(
-        title: 'Vídeo c/ áudio',
-        isCompleted: isFilled('7006491') || isFilled('VideoComAudio'),
-      ),
-      ContentProductionStep(
-        title: 'Vídeo legendado',
-        isCompleted: isFilled('7007172') || isFilled('VideoComLegendaPT'),
       ),
       ContentProductionStep(
         title: 'Descrição',
@@ -338,6 +292,40 @@ class ContentModel {
           } catch (_) {}
         }
         return null;
+      })(),
+      videoMakerText: (() {
+        final val = json['VideoMaker'] ?? json['field_6969404'];
+        if (val == null) return null;
+        if (val is String) {
+          try {
+            final decoded = jsonDecode(val);
+            return const JsonEncoder.withIndent('  ').convert(decoded);
+          } catch (_) {
+            return val;
+          }
+        }
+        try {
+          return const JsonEncoder.withIndent('  ').convert(val);
+        } catch (_) {
+          return val.toString();
+        }
+      })(),
+      diretorConteudoText: (() {
+        final val = json['DiretorConteudo'] ?? json['field_6963716'];
+        if (val == null) return null;
+        if (val is String) {
+          try {
+            final decoded = jsonDecode(val);
+            return const JsonEncoder.withIndent('  ').convert(decoded);
+          } catch (_) {
+            return val;
+          }
+        }
+        try {
+          return const JsonEncoder.withIndent('  ').convert(val);
+        } catch (_) {
+          return val.toString();
+        }
       })(),
     );
   }

@@ -168,7 +168,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate ?? DateTime.now(),
-                        firstDate: DateTime.now(),
+                        firstDate: DateTime(2020),
                         lastDate: DateTime(2100),
                       );
                       if (date != null && context.mounted) {

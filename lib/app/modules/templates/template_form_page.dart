@@ -148,6 +148,13 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
             }
           }
           
+          if (!_formData.containsKey('volumeNarracao')) {
+            _formData['volumeNarracao'] = '1.0';
+          }
+          if (!_formData.containsKey('textoNasImagens')) {
+            _formData['textoNasImagens'] = 'Todas as imagens terão texto';
+          }
+          
           for (var key in ['configLegendaPT', 'configLegendaEN']) {
             if (_formData[key] is String) {
               final text = _formData[key] as String;
@@ -171,6 +178,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                     if (kv[0] == 'shadow_opacity') map['shadow_opacity'] = int.tryParse(kv[1]) ?? 55;
                     if (kv[0] == 'shadow_depth') map['shadow_depth'] = int.tryParse(kv[1]) ?? 4;
                     if (kv[0] == 'highlight_color') map['highlight_color'] = kv[1];
+                    if (kv[0] == 'word_timestamps') map['word_timestamps'] = kv[1] == 'true';
                   }
                 }
                 map['max_lines'] ??= 2;
@@ -183,6 +191,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 map['shadow_opacity'] ??= 55;
                 map['shadow_depth'] ??= 1;
                 map['highlight_color'] ??= '#FFD633';
+                map['word_timestamps'] ??= false;
                 _formData[key] = map;
               }
             }
@@ -207,6 +216,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         'shadow_opacity': 55,
         'shadow_depth': 1,
         'highlight_color': '#FFD633',
+        'word_timestamps': false,
       };
       _formData['configLegendaEN'] = {
         'font_color': '#F3E300',
@@ -222,7 +232,9 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         'shadow_opacity': 55,
         'shadow_depth': 1,
         'highlight_color': '#FFD633',
+        'word_timestamps': false,
       };
+      _formData['volumeNarracao'] = '1.0';
     }
     
     await Future.wait([
@@ -379,6 +391,10 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
 
       final formDataToSave = Map<String, dynamic>.from(_formData);
 
+      if (formDataToSave['volumeNarracao'] == null || formDataToSave['volumeNarracao'].toString().trim().isEmpty) {
+        formDataToSave['volumeNarracao'] = '1.0';
+      }
+
       final tipoConteudo = _getString('tipoConteudo');
       final isVideo = tipoConteudo.toLowerCase().contains('vídeo') || tipoConteudo.toLowerCase().contains('video');
 
@@ -397,6 +413,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         formDataToSave.remove('configLegendaPT');
         formDataToSave.remove('configLegendaEN');
         formDataToSave.remove('idiomaNarracao');
+        formDataToSave.remove('volumeNarracao');
       } else {
         if (formDataToSave['duracaoVideo'] != 'Personalizado') {
           formDataToSave.remove('duracaoVideoCustomizada');
@@ -406,6 +423,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           formDataToSave.remove('vozNarradorGoogle');
           formDataToSave.remove('vozNarradorElevenLabs');
           formDataToSave.remove('vozNarrador');
+          formDataToSave.remove('volumeNarracao');
         } else {
           final motorVoz = formDataToSave['motorVoz'];
           if (motorVoz == 'Google') {
@@ -449,13 +467,17 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
         formDataToSave.remove('identidade');
       }
 
+      if (formDataToSave['tecnologiasImagens'] == 'Todas Imagens com HTML' || formDataToSave['qtdMaximaImagens'] == '1') {
+        formDataToSave['textoNasImagens'] = 'Todas as imagens terão texto';
+      }
+
       final identidadeValue = formDataToSave.remove('identidade');
       formDataToSave.remove('modoGeracaoImagens');
 
       final isCriacaoBgMusic = _getString('criacaoBackgroundMusic') == 'Sim';
       String? finalMusicOption = _selectedMusicOption;
 
-      if (!isVideo || !isCriacaoBgMusic || finalMusicOption == 'Nenhuma') {
+      if (!isVideo || isCriacaoBgMusic || finalMusicOption == 'Nenhuma') {
         finalMusicOption = null;
       }
 
@@ -774,10 +796,32 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
     );
   }
 
-  Widget _buildDropdown(String title, String key, List<String> options) {
+  Widget _buildDropdown(String title, String key, List<String> options, {bool allowCustom = false}) {
     final currentValue = _getString(key);
-    final value = options.contains(currentValue) ? currentValue : null;
+    final customToggleKey = '${key}_isCustom';
     
+    final bool isPredefined = options.contains(currentValue);
+    bool isCustom = _formData[customToggleKey] == true;
+
+    if (allowCustom && currentValue.isNotEmpty && !isPredefined) {
+      isCustom = true;
+      _formData[customToggleKey] = true;
+    }
+
+    String? dropdownValue;
+    if (isCustom) {
+      dropdownValue = '✍️ Personalizada...';
+    } else if (isPredefined) {
+      dropdownValue = currentValue;
+    } else {
+      dropdownValue = null;
+    }
+
+    final List<String> dropdownOptions = List.from(options);
+    if (allowCustom) {
+      dropdownOptions.add('✍️ Personalizada...');
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -787,20 +831,76 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, fillColor: Colors.white, filled: true),
-            value: value,
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-            onChanged: (val) => _updateForm(key, val),
+            value: dropdownValue,
+            items: dropdownOptions.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+            onChanged: (val) {
+              if (val == '✍️ Personalizada...') {
+                setState(() {
+                  _formData[customToggleKey] = true;
+                  if (isPredefined) {
+                    _formData[key] = '';
+                  }
+                });
+              } else {
+                setState(() {
+                  _formData[customToggleKey] = false;
+                  _formData[key] = val;
+                });
+              }
+            },
           ),
+          if (isCustom) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: isPredefined ? '' : currentValue,
+              decoration: InputDecoration(
+                hintText: 'Escreva a opção desejada...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.terracotta, width: 2),
+                ),
+                fillColor: AppColors.surface,
+                filled: true,
+              ),
+              onChanged: (val) {
+                _formData[key] = val;
+              },
+            ),
+          ]
         ],
       ),
     );
   }
 
-  Widget _buildDropdownWithDescriptions(String title, String key, List<Map<String, String>> options) {
+  Widget _buildDropdownWithDescriptions(String title, String key, List<Map<String, String>> options, {bool allowCustom = false}) {
     final currentValue = _getString(key);
-    // If currentValue doesn't exist in options, default to null or add it as a fallback.
-    // This prevents errors when older templates load with older option strings.
-    final value = options.any((o) => o['title'] == currentValue) ? currentValue : null;
+    final customToggleKey = '${key}_isCustom';
+    
+    final bool isPredefined = options.any((o) => o['title'] == currentValue);
+    bool isCustom = _formData[customToggleKey] == true;
+
+    if (allowCustom && currentValue.isNotEmpty && !isPredefined) {
+      isCustom = true;
+      _formData[customToggleKey] = true;
+    }
+
+    String? dropdownValue;
+    if (isCustom) {
+      dropdownValue = '✍️ Personalizada...';
+    } else if (isPredefined) {
+      dropdownValue = currentValue;
+    } else {
+      dropdownValue = null;
+    }
+
+    final List<Map<String, String>> dropdownOptions = List.from(options);
+    if (allowCustom) {
+      dropdownOptions.add({
+        'title': '✍️ Personalizada...',
+        'description': 'Escreva sua própria opção livremente.',
+      });
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -812,27 +912,63 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           DropdownButtonFormField<String>(
             isExpanded: true,
             decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, fillColor: Colors.white, filled: true),
-            value: value,
+            value: dropdownValue,
             selectedItemBuilder: (BuildContext context) {
-              return options.map<Widget>((o) {
+              return dropdownOptions.map<Widget>((o) {
                 return Text(o['title']!, style: const TextStyle(fontSize: 14));
               }).toList();
             },
-            items: options.map((o) => DropdownMenuItem(
+            items: dropdownOptions.map((o) => DropdownMenuItem(
               value: o['title'],
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(o['title']!, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(o['description']!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  if (o['description']!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(o['description']!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
                   const SizedBox(height: 4),
                 ],
               ),
             )).toList(),
-            onChanged: (val) => _updateForm(key, val),
+            onChanged: (val) {
+              if (val == '✍️ Personalizada...') {
+                setState(() {
+                  _formData[customToggleKey] = true;
+                  if (isPredefined) {
+                    _formData[key] = '';
+                  }
+                });
+              } else {
+                setState(() {
+                  _formData[customToggleKey] = false;
+                  _formData[key] = val;
+                });
+              }
+            },
           ),
+          if (isCustom) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: isPredefined ? '' : currentValue,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Escreva a $title que deseja...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.terracotta, width: 2),
+                ),
+                fillColor: AppColors.surface,
+                filled: true,
+              ),
+              onChanged: (val) {
+                _formData[key] = val;
+              },
+            ),
+          ]
         ],
       ),
     );
@@ -1026,6 +1162,21 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                 ],
               ),
               _buildRadio(
+                'Terá texto nas imagens?',
+                'textoNasImagens',
+                [
+                  'Apenas a imagem 1 (capa) terá texto',
+                  'Todas as imagens terão texto',
+                  'Nenhuma imagem terá texto, nem mesmo a thumb (imagem 1)'
+                ],
+                disabledOptions: [
+                  if (_getString('tecnologiasImagens') == 'Todas Imagens com HTML')
+                    'Apenas a imagem 1 (capa) terá texto',
+                  if (_getString('qtdMaximaImagens') == '1')
+                    'Apenas a imagem 1 (capa) terá texto',
+                ],
+              ),
+              _buildRadio(
                 'Usa Imagem de um ator ou atriz de referência?',
                 'usoImagemReferencia',
                 [
@@ -1057,7 +1208,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
 
     final usaNarrador = _getString('utilizaNarrador') == 'Sim';
     final usaLegenda = _getString('incluiLegenda') == 'Sim';
-    final isCriacaoBgMusic = _getString('criacaoBackgroundMusic') == 'Sim';
+    final isCriacaoBgMusic = _getString('utilizaBackgroundMusic') == 'Sim';
 
     return [
       _buildSectionHeader('ÁUDIO E NARRAÇÃO / LEGENDAS'),
@@ -1069,15 +1220,15 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildYesNo('Criação de background music?', 'criacaoBackgroundMusic'),
+              _buildYesNo('Utiliza background music?', 'utilizaBackgroundMusic'),
               
-              if (_getString('criacaoBackgroundMusic') == 'Sim')
+              if (_getString('utilizaBackgroundMusic') == 'Sim')
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Usa Músicas de Fundo Pré Gravadas?', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Música de Fundo Pré-Gravada (Selecione "Nenhuma" para criar uma nova com IA)', style: TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1130,6 +1281,8 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   _buildGoogleVoicesSection(),
                 if (_getString('motorVoz') == 'ElevenLabs')
                   _buildTextField('Código da voz (ElevenLabs)', 'vozNarradorElevenLabs'),
+                
+                _buildTextField('Volume da Narração (1.0 = 100%, 1.5 = 150%, 2.0 = 200%)', 'volumeNarracao'),
               ],
               
               const Divider(height: 32),
@@ -1203,10 +1356,10 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
               ]),
               _buildDropdown('Estilo do Conteúdo', 'estiloConteudo', [
                 'Educacional', 'Entretenimento', 'Inspiracional', 'Autoridade', 'Storytelling'
-              ]),
+              ], allowCustom: true),
               _buildDropdown('Público-Alvo', 'publicoAlvo', [
                 'Jovens (18–25)', 'Adultos (25–40)', 'Empresários', 'Profissionais liberais', 'Estudantes', 'Público geral'
-              ]),
+              ], allowCustom: true),
               _buildDropdown('Nível de Viralidade', 'nivelViralidade', [
                 'Conteúdo seguro', 'Conteúdo forte', 'Conteúdo viral'
               ]),
@@ -1246,7 +1399,7 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   'title': 'Gancho → Cena Intriguante → Contexto Rápido → História e Detalhes → Virada → Pergunta → CTA',
                   'description': 'Estrutura focada em storytelling com uma quebra de expectativa ou reviravolta (virada) no meio, ideal para prender a atenção com narrativa e gerar engajamento com uma pergunta final.'
                 },
-              ]),
+              ], allowCustom: true),
               _buildDropdownWithDescriptions('Estilo de Gancho', 'estiloGancho', [
                 {
                   'title': 'Desafio ou Prova Social',
@@ -1280,11 +1433,11 @@ class _TemplateFormPageState extends State<TemplateFormPage> {
                   'title': 'Tutorial Direto ao Ponto (Como fazer)',
                   'description': 'Focado puramente na utilidade prática sem enrolação. Ex: "Aprenda a fazer X em menos de 60 segundos".'
                 },
-              ]),
+              ], allowCustom: true),
               _buildDropdown('Chamada para Ação (CTA)', 'chamadaAcao', [
                 'Seguir o perfil', 'Curtir o post', 'Comentar', 'Compartilhar', 'Salvar o Post', 'Acessar link na bio',
                 'Entrar em contato no WhatsApp', 'Comprar produto'
-              ]),
+              ], allowCustom: true),
               _buildDropdown('Nível de criatividade permitido para a IA', 'nivelCriatividade', [
                 'Baixo', 'Médio', 'Alto', 'Muito alto'
               ]),
